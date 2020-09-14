@@ -1,0 +1,8 @@
+------------------------------------------------------------------------------------
+This file explains the example in BTR_sythetic.jl which generates a synthetic 
+dataset and then estimates several models. It also explains how to alter the 
+File to demonstrate the value of adding interaction effects and multi-paragraph
+documents into the BTR framework
+------------------------------------------------------------------------------------
+
+
