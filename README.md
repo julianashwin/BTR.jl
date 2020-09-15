@@ -29,9 +29,11 @@ vocab = dtm_sparse.terms
 ```
 The estimation function takes the DTM as a SparseMatrixCSC object, which can be extracted from the DocumentTermMatrix.
 ```julia
-dtm_spare = dtm.dtm
+dtm_sparse = dtm.dtm
 ```
-The response variable `julia y` and the non-text regression features `julia x` should be formated as a one and two dimensional array of floats respectively. Optionally, you can also specify the `julia doc_idx` of each line in the DTM as an array on integers, if there are multiple paragraphs/documents per observation.
+The response variable `y` and the non-text regression features `x` should be formated as a one and two dimensional array of floats respectively. Optionally, you can also specify the `doc_idx` of each line in the DTM as an array on integers, if there are multiple paragraphs/documents per observation. The dimensionality of `x`,`y` and `doc_idx` must match that of `dtm_sparse`.
+
+If you wish to split the sample into training and test sets, this should be done after pre-processing to ensure that the DTM vocabulary is consistent across the two sets.
 
 ## Estimation
 
@@ -50,6 +52,8 @@ function BTR_EMGibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
     interactions::Array{Int64,1}=Array{Int64,1}([]), batch::Bool=false, EM_split::Float64 = 0.75,
     leave_one_topic_out::Bool=false, plot_ω::Bool = false)
 ```
+There are three necessary arguments
+* The document-term-matrix
 * Takes as arguments a document-term-matrix encoded as a sparse matrix; the number of topics as an integer; and the response variable as an array of floats.
   
   
