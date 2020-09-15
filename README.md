@@ -11,7 +11,7 @@ which will load both the estimation and visualisation functions into your worksp
 
 ## Pre-processing
 
-Before estimating we need to convert the text-data into a document-term-matrix (DTM) for which we can use the DocumentTermMatrix function from the [link text itself]: http://www.reddit.comTextAnalysis.jl package
+Before estimating we need to convert the text-data into a document-term-matrix (DTM) for which we can use the DocumentTermMatrix function from the https://github.com/JuliaText/TextAnalysis.jl package
 
 The core functions for estimation are
 * BTR_EMGibbs
