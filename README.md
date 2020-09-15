@@ -11,14 +11,33 @@ which will load both the estimation and visualisation functions into your worksp
 
 ## Pre-processing
 
-Before estimating we need to convert the text-data into a document-term-matrix (DTM) for which we can use the DocumentTermMatrix function from the [TextAnalysis.jl](https://github.com/JuliaText/TextAnalysis.jl) package.
+Before estimating we need to convert the text-data into a document-term-matrix (DTM) for which we can use the DocumentTermMatrix function from the [TextAnalysis.jl](https://github.com/JuliaText/TextAnalysis.jl) package. 
 
+To do this import the documents as an array of strings (stemming, stop-word removal etc. can be done separately or in Julia using the tools described in the [documentation](https://juliatext.github.io/TextAnalysis.jl/documents.html#Preprocessing-Documents-1) for TextAnalysis.jl). Then convert this array of strings into an array of StringDocuments
+```julia
+docs = StringDocument.(text_clean)
+```
+and convert this array into a Corpus.
+```julia
+crps = Corpus(docs)
+update_lexicon!(crps)
+```
+This Corpus can then be converted into DTM and the vocab extracted (for visualisation later).
+```julia
+dtm = DocumentTermMatrix(crps)
+vocab = dtm_sparse.terms
+```
+The estimation function takes the DTM as a SparseMatrixCSC object, which can be extracted from the DocumentTermMatrix.
+```julia
+dtm_spare = dtm.dtm
+```
+The response variable `julia y` and the non-text regression features `julia x` should be formated as a one and two dimensional array of floats respectively. Optionally, you can also specify the `julia doc_idx` of each line in the DTM as an array on integers, if there are multiple paragraphs/documents per observation.
 
 ## Estimation
 
 The core function for estimation is BTR_EMGibbs
 ```julia
-BTR_EMGibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
+function BTR_EMGibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
     y::Array{Float64,1};  x::Array{Float64,2} = zeros(1,1),
     σ2::Float64 = 0.,
     α::Float64 =1., η::Float64 = 1., σ_ω::Float64 = 1., μ_ω::Float64 = 0.,
