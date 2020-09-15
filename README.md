@@ -58,7 +58,7 @@ There are three necessary arguments:
 * `y::Array{Float64,1}`: the response variable.
 
 There are then a number of optional key-word arguments:
-* `x::Array{Float64,2}`: the non-text regression features, the default is to run a BTR without an additional regression features.
+* `x::Array{Float64,2}`: the non-text regression features, the default is to run a BTR without any additional regression features (i.e. a supervised LDA).
 * `σ2::Float64`: if specified, the residual variance `σ2` is not estimated but taken as known, if not specified it will be estimated.
 * `α::Float64`: the Dirichlet prior on document-topic proportions `θ`, default is `1.0`.
 * `η::Float64`: the Dirichlet prior on topic-vocabulary proportions `β`, default is `1.0`.
@@ -80,6 +80,20 @@ There are then a number of optional key-word arguments:
 * `EM_split::Float64`: proportion of sample used in E vs M step, default is `0.75`.
 * `leave_one_topic_out::Bool`: toggles whether to leave one topic out of the regression (not fully implemented yet), default is `false`.
 * `plot_ω::Bool`: toggles whether to plot the evolution of `ω` across EM-iterations, default is `false`.
+
+The output of the function is a NamedTuple with the following elements:
+* `β`: mean of posterior distribution of topic-vocabulary distribution from last E-step.
+* `θ`: mean of posterior distribution of document-topic distribution from last E-step.
+* `Z_bar`: mean topic assignments of posterior distribution from last E-step.
+* `ω`:  mean of posterior distribution for regression coefficients from last M-step. 
+* `Σ`: mean of posterior distribution for regression feature covariance matrix from last M-step (will only be calculated when there **is no** prior on `σ2`).
+* `σ2`: mean of posterior distribution for residual variance.
+* `docs`: document-topic assignments from the last iteration of the last E-step. 
+* `topics`: topic-vocabulary assignments from the last iteration of the last E-step. 
+* `ω_post`: sampled posterior distribution for regression coefficients from last M-step (will only be calculated when there **is** an Inverse-Gamma prior on `σ2`).
+* `σ2_post`: sampled posterior distribution for residual variance from last M-step (will only be calculated when there **is** an Inverse-Gamma prior on `σ2`).
+* `Z_bar_Mstep`: mean topic assignments of posterior distribution for the last M-step (useful is using Cross-Validation AM approach).
+* `ω_iters`: evolution of across EM-iterations, which is used to assess convergence.
   
   
 ## Prediction
