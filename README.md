@@ -11,10 +11,12 @@ which will load both the estimation and visualisation functions into your worksp
 
 ## Pre-processing
 
-Before estimating we need to convert the text-data into a document-term-matrix (DTM) for which we can use the DocumentTermMatrix function from the [TextAnalysis.jl](https://github.com/JuliaText/TextAnalysis.jl) package
+Before estimating we need to convert the text-data into a document-term-matrix (DTM) for which we can use the DocumentTermMatrix function from the [TextAnalysis.jl](https://github.com/JuliaText/TextAnalysis.jl) package.
 
-The core functions for estimation are
-* BTR_EMGibbs
+
+## Estimation
+
+The core function for estimation is BTR_EMGibbs
 ```julia
 BTR_EMGibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
     y::Array{Float64,1};  x::Array{Float64,2} = zeros(1,1),
@@ -29,5 +31,31 @@ BTR_EMGibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
     interactions::Array{Int64,1}=Array{Int64,1}([]), batch::Bool=false, EM_split::Float64 = 0.75,
     leave_one_topic_out::Bool=false, plot_ω::Bool = false)
 ```
-  * Takes as arguments a document-term-matrix encoded as a sparse matrix; the number of topics as an integer; and the response variable as an array of floats.
-* BTR_Gibbs_predict
+* Takes as arguments a document-term-matrix encoded as a sparse matrix; the number of topics as an integer; and the response variable as an array of floats.
+  
+  
+## Prediction
+  
+The core function for prediction is BTR_Gibbs_predict
+```julia
+function BTR_Gibbs_predict(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
+    β::Array{Float64,2}, ω::Array{Float64,1};
+    x::Array{Float64,2} = zeros(1,1),
+    Σ::Array{Float64,2} = zeros(2,2),
+    σ2::Float64 = 0., y::Array{Float64,1} = zeros(1),
+    α::Float64 =1.,
+    E_iteration::Int64 = 100, burnin::Int64 = 10,
+    interactions::Array{Int64,1}=Array{Int64,1}([]))
+```
+  
+  
+  
+## Visualisation
+
+The core function for visualisation is BTR_plot
+```julia
+function BTR_plot(β::Array{Float64,2}, ω_post::Array{Float64,2};
+    nwords::Int64 = 10, plt_title::String = "", left_mar::Int64 = 7,
+    fontsize::Int64 = 6, title_size::Int64 = 14,
+    interactions::Array{Int64,1}=Array{Int64,1}([]))
+```    
