@@ -56,6 +56,7 @@ There are three necessary arguments:
 * `dtm_in::SparseMatrixCSC{Int64,Int64}`: the document-term-matrix.
 * `ntopics::Int64`: the number of topics you want the model to have.
 * `y::Array{Float64,1}`: the response variable.
+
 There are then a number of optional key-word arguments:
 * `x::Array{Float64,2}`: the non-text regression features, the default is to run a BTR without an additional regression features.
 * `σ2::Float64`: if specified, the residual variance `σ2` is not estimated but taken as known, if not specified it will be estimated.
