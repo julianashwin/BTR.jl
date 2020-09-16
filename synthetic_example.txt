@@ -11,5 +11,5 @@ There are several lines commented out which will include an interaction with x i
 
 To include observations without documents, simply set N > D in line 36
 
-For multiple paragraphs per observation, set P_d > 1 in line 34, and then use the BTR_EMGibbs_para function instead of BTR_EMGibbs.
+For multiple paragraphs per observation, set P_d > 1 in line 34, and then use the BTR_EMGibbs_para function instead of BTR_EMGibbs, the doc_idxs will be created by line 78 and separated into test and training in lines 184-185.
 
