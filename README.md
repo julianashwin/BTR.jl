@@ -7,7 +7,7 @@ In order to estimate BTR models and plot their output, you will first need to im
 ```julia
 include("src/BTR.jl")
 ```
-which will load the necessary dependencies and functions into your workspace. The BTR_synthetic.jl file runs through an example in which a synthetic dataset is generated, prepared for estimation and then a variety of models estimated on it. More explanation for this file can be found in the sythetic_example.txt file.
+which will load the necessary dependencies and functions into your workspace. The BTR_synthetic.jl file runs through an example in which a synthetic dataset is generated, prepared for estimation and then a variety of models estimated on it. Some extra explanation on how to change this file for different examples can be found in the sythetic_example.txt file.
 
 ## Pre-processing
 
