@@ -37,7 +37,7 @@ If you wish to split the sample into training and test sets, this should be done
 
 ## Estimation
 
-The core function for estimation is BTR_EMGibbs
+The core function for estimation is `BTR_EMGibbs`, which estimates a BTR model with an EM-Gibbs algorithm.
 ```julia
 function BTR_EMGibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
     y::Array{Float64,1};  x::Array{Float64,2} = zeros(1,1),
@@ -53,9 +53,9 @@ function BTR_EMGibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
     leave_one_topic_out::Bool=false, plot_ω::Bool = false)
 ```
 There are three necessary arguments:
-* `dtm_in::SparseMatrixCSC{Int64,Int64}`: the document-term-matrix.
-* `ntopics::Int64`: the number of topics you want the model to have.
-* `y::Array{Float64,1}`: the response variable.
+* `dtm_in::SparseMatrixCSC{Int64,Int64}`: the DTM, as a sparse matrix.
+* `ntopics::Int64`: the number of topics you want the model to have, as an integer.
+* `y::Array{Float64,1}`: the response variable, as a one-dimensional array of floats.
 
 There are then a number of optional key-word arguments:
 * `x::Array{Float64,2}`: the non-text regression features, the default is to run a BTR without any additional regression features (i.e. a supervised LDA).
@@ -66,10 +66,10 @@ There are then a number of optional key-word arguments:
 * `μ_ω::Float64`: mean of Gaussian prior on regression coefficients `ω`, default is `0.0`.
 * `a_0::Float64`: shape of Inverse-Gamma prior on residual variance `σ2`, if not specified the model is estimated without prior on `σ2`.
 * `b_0::Float64`: scale of Inverse-Gamma prior on residual variance `σ2`, if not specified the model is estimated without prior on `σ2`.
-* `E_iteration::Int`: number of iterations per E-step, default is 100.
-* `M_iteration::Int`: number of iterations per M-step, default is 500.
-* `EM_iteration::Int`: maximum number of EM-iterations if convergence not reached, default is 10.
-* `burnin::Int`: number of iterations used as a burnin in Gibbs sampling, default is 10.
+* `E_iteration::Int`: number of iterations per E-step, default is `100`.
+* `M_iteration::Int`: number of iterations per M-step, default is `500`.
+* `EM_iteration::Int`: maximum number of EM-iterations if convergence not reached, default is `10`.
+* `burnin::Int`: number of iterations used as a burnin in Gibbs sampling, default is `10`.
 * `topics_init::Array`: initialised topics as an array of Lda.Topic objects, default is random assignment.
 * `docs_init::Array`: initialised documents as an array of Lda.TopicBasedDocument objects, default is random assignment.
 * `ω_init::Array{Float64,1}`: initialised regression coefficients `ω`, default is `μ_ω`.
@@ -94,11 +94,18 @@ The output of the function is a NamedTuple with the following elements:
 * `σ2_post`: sampled posterior distribution for residual variance from last M-step (will only be calculated when there **is** an Inverse-Gamma prior on `σ2`).
 * `Z_bar_Mstep`: mean topic assignments of posterior distribution for the last M-step (useful is using Cross-Validation AM approach).
 * `ω_iters`: evolution of across EM-iterations, which is used to assess convergence.
-  
+
+So if, for example, you want to estimate estimate a 10 topic BTR model with an `InverseGamma(4.0,4.0)` prior on `σ2` and topic-interaction terms on the second and third columns of `x`, with Cross-Validation EM, this would be:
+```julia
+results_btr = BTR_EMGibbs_paras(dtm_sparse, 10, y, x = x, a_0 = 4.0, b_0 = 4.0,
+        interactions = [2,3], batch = true)
+```
+All other priors and estimation options would be set as per the default values described above.
+
   
 ## Prediction
   
-The core function for prediction is BTR_Gibbs_predict
+The core function for prediction is `BTR_Gibbs_predict`, which produces predictions for the response variable, given some regression features and previously estimated topic-vocabulary distribution `β` and regression coefficients `ω`.
 ```julia
 function BTR_Gibbs_predict(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
     β::Array{Float64,2}, ω::Array{Float64,1};
@@ -109,6 +116,44 @@ function BTR_Gibbs_predict(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
     E_iteration::Int64 = 100, burnin::Int64 = 10,
     interactions::Array{Int64,1}=Array{Int64,1}([]))
 ```
+There are four necessary arguments:
+* `dtm_in::SparseMatrixCSC{Int64,Int64}`: the DTM.
+* `ntopics::Int`: the number of topics.
+* `β::Array{Float64,2}`: the topic-vocabulary distribution to be used in prediction (having previously been estimated by, for example, `BTR_EMGibbs`).
+* `ω::Array{Float64,1}`: the regression coefficients, note that the dimensionality must match that implied by `ntopics` and the optional arguments `x` and `interactions`. 
+
+There are then also some additional optional arguments:
+* `x::Array{Float64,2}`: additional non-text regression features, if not specified the function assumes that the only regression features are the topics.
+* `Σ::Array{Float64,2}`: the covariance of the estimated regression features, to produce predictive distributions for `y` (not fully implemented yet).
+* `σ2::Float64`: the residual variance, to produce predictive distributions for `y` (not fully implemented yet). 
+* `y::Array{Float64,1}`: the true values of the response variables being predicted, if specified the MSE of the predictions is calculated. 
+* `α::Float64 =1.`: Dirichlet prior on the document-topic distribution, default is `1.0`.
+* `E_iteration::Int64`: number of iterations for Gibbs sampler estimating the topic assignments of the documents, default is `100`.
+* `burnin::Int64`number of iterations used as a burnin in Gibbs sampling, default is `10`.
+* `interactions::Array{Int64,1}`: if specified includes interactions between the topic features and specified columns of `x`, default is no interactions. This needs to match the dimensionality of `ω`.
+
+The output of the function is a NamedTuple with the following elements:
+* `y_pred`: point predictions for the response variables associated with the inputted regression features.
+* `θ`: mean of posterior distribution for document-topic distribution of text regression features.
+* `Z_bar`: mean topic assignments of posterior distribution of text regression features.
+* `ω`: mean of posterior distribution for regression coefficients from last M-step.
+* `mse_oos`: the MSE of predicted response variables (will be zero if `y` not included as a key-word argument.
+* `docs`: document-topic assignments from the last iteration of Gibbs sampling. 
+* `topics`: topic-vocabulary assignments from the last iteration of Gibbs sampling. 
+
+
+## Multiple-paragraphs
+
+The functions `BTR_EMGibbs_paras` and `BTR_Gibbs_predict_paras` are analogues of those above which estimate a BTR with multiple paragraphs/documents per observation. The key difference is that the `doc_idx::Array{Int64,1}` key-word argument can be used to associate each row of the DTM with a document. The model is then estimated with each paragraph (i.e. row of the DTM) having and independent `θ` distribution, but with the regression estimated at the document level (as encoded in `doc_idx`. This functionality will eventually be folded into the main `BTR_EMGibbs` and `BTR_Gibbs_predict` functions, but is kept separate for now.
+
+
+## Benchmarking functions
+
+There are functions which estimate several other functions that can be used to benchmark the performance of BTR.
+* `LDA_Gibb`s: 
+* `LDA_Gibbs_predict`
+* `BLR_Gibbs`: estimates a Bayesian Linear Regression with Normal-Inverse-Gamma priors by Gibbs sampling
+* `BTR_Gibbs`: estimate BTR with pure Gibbs sampling (i.e. without the EM algorithm). This is not ready yet.
   
   
   
@@ -121,6 +166,8 @@ function BTR_plot(β::Array{Float64,2}, ω_post::Array{Float64,2};
     fontsize::Int64 = 6, title_size::Int64 = 14,
     interactions::Array{Int64,1}=Array{Int64,1}([]))
 ```    
+
+There is a similar function for the 3 topic synthetic example generated by the `synthetic_example.jl` file.
 
 
 ## Organisation of src code
