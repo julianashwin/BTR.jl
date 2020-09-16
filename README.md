@@ -167,7 +167,7 @@ function BTR_plot(β::Array{Float64,2}, ω_post::Array{Float64,2};
     fontsize::Int64 = 6, title_size::Int64 = 14,
     interactions::Array{Int64,1}=Array{Int64,1}([]))
 ``` 
-The image below illustrates this for an example using Yelp reviews. We can see that some topics are generally associated with more positive reviews (e.g. topic 8 which puts a high weight on terms like "time", "recommend" and "amaz"), while other topics are generally associated with more negative reviews (e.g. topic 1 which puts a high weight on terms like "wait", "lobster" and "time".[^1]: Note that this example also shows an attractive feature of using a topic modelling framework for text feature extraction: the term "time" has a positive meaning when it appears with "amaz", but a negative meaning when it appears with "wait". 
+The image below illustrates this for an example using Yelp reviews. We can see that some topics are generally associated with more positive reviews (e.g. topic 8 which puts a high weight on terms like "time", "recommend" and "amaz"), while other topics are generally associated with more negative reviews (e.g. topic 1 which puts a high weight on terms like "wait", "lobster" and "time". Note that this example also shows an attractive feature of using a topic modelling framework for text feature extraction: the term "time" has a positive meaning when it appears with "amaz", but a negative meaning when it appears with "wait". 
 
 <img src="/figures/YP_BTRplot_example.png" alt="BTRplot example" title="Yelp example"/>
 
