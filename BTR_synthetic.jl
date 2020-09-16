@@ -9,7 +9,8 @@ cd("/Users/julianashwin/Documents/DPhil/BTR_ECB/Julia_sampling/")
 Load functions and necessary packages
     You'll need to install the following packages if you don't have them:
         SparseArrays, LinearAlgebra, Random, Distributions, DataFrames, GLM
-        TextAnalysis, Plots, StatsPlots, ProgressMeter, CSV, KernelDensity
+        TextAnalysis, Plots, StatsPlots, ProgressMeter, CSV, KernelDensity,
+        StatsBase, ColorSchemes
     You can do that with Pkg.add("name")
 """
 
