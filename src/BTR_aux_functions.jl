@@ -106,6 +106,7 @@ Function that generates string documents and topic assignments
 function generate_docs(D, Nd, K, θ_true, β_true)
     docs = Array{String,1}(undef, D)
     Z = Int.(zeros(D,Nd))
+    V = size(β_true, 2)
     topic_counts = Int.(zeros(D,K))
     word_counts = Int.(zeros(D,V))
     for dd in 1:D

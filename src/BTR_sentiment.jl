@@ -1,4 +1,4 @@
-LM_lists = CSV.read("src/LoughranMcDonald_lists.csv")
+include("LM_lists.jl")
 
 LM_dicts = (
     Negative = Array(String.(skipmissing(LM_lists.Negative))),
@@ -10,7 +10,7 @@ LM_dicts = (
     Constraining = Array(String.(skipmissing(LM_lists.Constraining))))
 
 
-HIV_lists = CSV.read("src/HarvardIV_lists.csv")
+include("HIV_lists.jl")
 
 HIV_dicts = (
     Negative = Array(String.(skipmissing(unique(HIV_lists.Negative)))),

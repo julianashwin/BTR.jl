@@ -14,7 +14,8 @@ Load functions and necessary packages
     You can do that with Pkg.add("name")
 """
 
-using StatsPlots
+using BTR, TextAnalysis, DataFrames
+using StatsPlots, StatsBase, Plots.PlotMeasures, Distributions, Random
 
 # This will load all the estimation and plotting functions
 include("src/BTR.jl")
@@ -128,6 +129,7 @@ display(ols_coeffs)
 regressors = hcat(Z_bar_all[1:D,:])
 ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y[1:D])
 display(ols_coeffs)
+mse_nox = mean((y .- regressors*ols_coeffs).^2)
 
 
 ## All observations
