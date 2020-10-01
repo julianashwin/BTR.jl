@@ -14,16 +14,22 @@ Load functions and necessary packages
     You can do that with Pkg.add("name")
 """
 
-using BTR, TextAnalysis, DataFrames
+"""
+To make sure the latest version of the package is used run
+pkg> dev /Users/julianashwin/Documents/GitHub/BTR.jl
+or
+pkg> dev https://github.com/julianashwin/BTR.jl
+
+"""
+
+using BTR, TextAnalysis
+using DataFrames, CSV
 using StatsPlots, StatsBase, Plots.PlotMeasures, Distributions, Random
 
-# This will load all the estimation and plotting functions
-include("src/BTR.jl")
-
 # This sets the plotting backend: gr() is faster, pyplot() is prettier
-#gr()
+gr()
 #pyplot()
-plotly()
+#plotly()
 
 """
 Generate some synthetic data
@@ -329,12 +335,6 @@ Estimate 2 stage LDA then Bayesian Linear Regression (BLR)
 ## Estimate LDA model on full training set
 @time results_lda  = LDA_Gibbs(dtm_train, ntopics, α = α, η = η,
     iteration = E_iteration, burnin=burnin)
-@time results_btr =
-    BTR_EMGibbs(dtm_train, ntopics, y_train, x = x_train,
-        α = α, η = η, σ_ω = σ_ω, a_0 = a_0, b_0 = b_0,
-        batch = false, ω_tol = ω_tol, rel_tol=true, plot_ω=true,
-        E_iteration = M_iteration, EM_iteration = 1,
-        M_iteration = 1, EM_split = EM_split, burnin = burnin)
 
 
 ## Create regressors with an without fixed effects and interaction effects
