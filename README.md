@@ -1,13 +1,21 @@
 # BTR.jl
 Estimate Bayesian Topic Regression models
 
-## Importing necessary functions
+## Installing
 
-In order to estimate BTR models and plot their output, you will first need to import the necessary functions. First, make sure you are in the correct working directory (i.e. the one which contains the src folder). Then run the line
+To install the package, first enter package mode in julia by entering "]". The package can then be installed either directly from GitHub with 
 ```julia
-include("src/BTR.jl")
+pkg> dev https://github.com/julianashwin/BTR.jl
 ```
-which will load the necessary dependencies and functions into your workspace. The BTR_synthetic.jl file runs through an example in which a synthetic dataset is generated, prepared for estimation and then a variety of models estimated on it. Some extra explanation on how to change this file for different examples can be found in the sythetic_example.txt file.
+or if the repository has been downloaded, from the path to the BTR.jl folder
+```julia
+pkg> dev path_to_folder/BTR.jl
+```
+Once the pakage mode is exited (cmd+c), the package can then be loaded with 
+```julia
+using BTR
+```
+The `BTR_synthetic.jl` file runs through an example in which a synthetic dataset is generated, prepared for estimation and then a variety of models estimated on it. Some extra explanation on how to change this file for different examples can be found in the sythetic_example.txt file.
 
 ## Pre-processing
 
