@@ -7,7 +7,7 @@ To install the package, first enter package mode in julia by entering "]". The p
 ```julia
 pkg> dev https://github.com/julianashwin/BTR.jl
 ```
-or if the repository has been downloaded, from the path to the BTR.jl folder
+or if the repository has been downloaded, from the path to the BTR.jl folder (note, this is the path to the BTR.jl *folder*, not to the file of the same name in the src folder).
 ```julia
 pkg> dev path_to_folder/BTR.jl
 ```
