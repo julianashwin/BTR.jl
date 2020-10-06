@@ -23,7 +23,6 @@ pkg> dev https://github.com/julianashwin/BTR.jl
 """
 
 using BTR
-#include("src/BTR.jl")
 using TextAnalysis, DataFrames, CSV
 using StatsPlots, StatsBase, Plots.PlotMeasures, Distributions, Random
 
