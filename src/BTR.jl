@@ -1,7 +1,7 @@
 module BTR
 
-using SparseArrays, LinearAlgebra, CSV, KernelDensity, DataFrames
-using Random, Distributions, DataFrames, GLM, StatsBase
+using SparseArrays, LinearAlgebra, CSV, KernelDensity
+using Random, Distributions, DataFrames, GLM, StatsBase, JSON
 using TextAnalysis, Plots, ProgressMeter, ColorSchemes, Plots.PlotMeasures
 
 
@@ -25,8 +25,6 @@ export coef_plot, synth_data_plot, BTR_plot, plot_topics
 export BLR, BLR_Gibbs
 
 
-import Random
-import JSON
 
 
 

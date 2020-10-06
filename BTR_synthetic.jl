@@ -2,7 +2,7 @@
 Implementation of BTR with Gibbs sampling for a toy dataset
 """
 ## Set working directory (needs to have the src folder in it)
-cd("/Users/julianashwin/Documents/DPhil/BTR_ECB/Julia_sampling/")
+cd("/Users/julianashwin/Documents/GitHub/BTR.jl/")
 
 
 """
@@ -22,8 +22,9 @@ pkg> dev https://github.com/julianashwin/BTR.jl
 
 """
 
-using BTR, TextAnalysis
-using DataFrames, CSV
+using BTR
+#include("src/BTR.jl")
+using TextAnalysis, DataFrames, CSV
 using StatsPlots, StatsBase, Plots.PlotMeasures, Distributions, Random
 
 # This sets the plotting backend: gr() is faster, pyplot() is prettier
@@ -38,8 +39,8 @@ Generate some synthetic data
 ## Size of sample and number of topics
 K = 3 # number of topics
 V = 9 # length of vocabulary (number of unique words)
-D = 5000 # number of documents
-Pd = 1 # number of paragraphs
+D = 2000 # number of documents
+Pd = 10 # number of paragraphs
 Np = 25 # number of words per document
 N = D # total observations (N>=D)
 NP = N*Pd # total number of paragraphs
@@ -128,12 +129,12 @@ Test whether synthetic data gives correct coefficients in OLS regression with tr
 """
 ## Just observations with documents
 #regressors = hcat(Z_bar_all[1:D,:], inter_effects[1:D,:],x2[1:D,:])
-regressors = hcat(Z_bar_all[1:D,:], x[1:D,:])
-ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y[1:D])
+regressors = hcat(Z_bar_all[1:DP,:], x[1:DP,:])
+ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y[1:DP])
 display(ols_coeffs)
 
-regressors = hcat(Z_bar_all[1:D,:])
-ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y[1:D])
+regressors = hcat(Z_bar_all[1:DP,:])
+ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y[1:DP])
 display(ols_coeffs)
 mse_nox = mean((y .- regressors*ols_coeffs).^2)
 
@@ -291,6 +292,19 @@ Estimate BTR
 @time results_btr =
     BTR_EMGibbs(dtm_train, ntopics, y_train, x = x_train,
         α = α, η = η, σ_ω = σ_ω, a_0 = a_0, b_0 = b_0,
+        batch = true, ω_tol = ω_tol, rel_tol=true, plot_ω=true,
+        E_iteration = E_iteration, EM_iteration = EM_iteration,
+        M_iteration = M_iteration, EM_split = EM_split, burnin = burnin)
+topic_order = synth_reorder_topics(results_btr.β)
+plt = synth_data_plot(results_btr.β, results_btr.ω_post, true_ω = ω_true,
+    topic_ord = topic_order, plt_title = "", legend = false,
+    left_mar = 3,top_mar = 3, bottom_mar = 0, ticksize = 12, labelsize = 25)
+
+
+@time results_btr =
+    BTR_EMGibbs_paras(dtm_train, ntopics, y_train, x = x_train,
+        α = α, η = η, σ_ω = σ_ω, a_0 = a_0, b_0 = b_0,
+        doc_idx = doc_idx_train,
         batch = true, ω_tol = ω_tol, rel_tol=true, plot_ω=true,
         E_iteration = E_iteration, EM_iteration = EM_iteration,
         M_iteration = M_iteration, EM_split = EM_split, burnin = burnin)

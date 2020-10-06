@@ -1,5 +1,5 @@
 # Paste in the CSV file as a string here
-LM_lists = readtable(IOBuffer("Negative,Positive,Uncertainty,Litigious,StrongModal,WeakModal,Constraining
+LM_lists = CSV.read(IOBuffer("Negative,Positive,Uncertainty,Litigious,StrongModal,WeakModal,Constraining
 abandon,able,abeyance,abovementioned,always,almost,abide
 abandoned,abundance,abeyances,abrogate,best,apparently,abiding
 abandoning,abundant,almost,abrogated,clearly,appeared,bound
@@ -2354,4 +2354,4 @@ wrongdoing,,,,,,
 wrongdoings,,,,,,
 wrongful,,,,,,
 wrongfully,,,,,,
-wrongly,,,,,,"))
+wrongly,,,,,,"), threaded = false)

@@ -1,5 +1,5 @@
 # Paste in the CSV file as a string here
-HIV_lists = readtable(IOBuffer("Negative,Positive,Pleasure,Pain
+HIV_lists = CSV.read(IOBuffer("Negative,Positive,Pleasure,Pain
 abandon,abide,admiration,ache
 abandonment,ability,admire,afraid
 abate,able,adore,agonize
@@ -2290,4 +2290,4 @@ wrongful,,,
 wrought,,,
 yawn,,,
 yearn,,,
-yelp,,,"))
+yelp,,,"), threaded = false)
