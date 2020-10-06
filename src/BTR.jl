@@ -1,6 +1,6 @@
 module BTR
 
-using SparseArrays, LinearAlgebra, CSV,KernelDensity
+using SparseArrays, LinearAlgebra, CSV, KernelDensity, DataFrames
 using Random, Distributions, DataFrames, GLM, StatsBase
 using TextAnalysis, Plots, ProgressMeter, ColorSchemes, Plots.PlotMeasures
 
