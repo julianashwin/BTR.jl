@@ -22,8 +22,8 @@ pkg> dev https://github.com/julianashwin/BTR.jl
 
 """
 
-using BTR
-#include("src/BTR.jl")
+#using BTR
+include("src/BTR_dev.jl")
 using TextAnalysis, DataFrames, CSV
 using StatsPlots, StatsBase, Plots.PlotMeasures, Distributions, Random
 
@@ -39,9 +39,9 @@ Generate some synthetic data
 ## Size of sample and number of topics
 K = 3 # number of topics
 V = 9 # length of vocabulary (number of unique words)
-D = 2500 # number of documents
-Pd = 2 # number of paragraphs
-Np = 25 # number of words per document
+D = 100 # number of documents
+Pd = 4 # number of paragraphs
+Np = 10 # number of words per document
 N = D # total observations (N>=D)
 NP = N*Pd # total number of paragraphs
 DP = D*Pd # total number of non-empty paragraphs
@@ -49,10 +49,10 @@ DP = D*Pd # total number of non-empty paragraphs
 ## Parameters of true regression model
 ω_z_true = [-1.,0.,1.] # coefficients on topics
 #ω_zx_true = [2.,0.,1.] # coefficients on (topic,x) interactions
-ω_x_true = [2.] # coefficients on (topic,x) interactions
+ω_x_true = [2., 0.] # coefficients on (topic,x) interactions
 #ω_true = cat(ω_z_true, ω_zx_true, ω_x_true, dims = 1) # all coefficients
 ω_true = cat(ω_z_true, ω_x_true, dims = 1) # all coefficients
-σ_y_true = 0.1 # residual variance
+σ_y_true = 0.05 # residual variance
 
 ## Dirichlet priors for topics
 α = 1.0 # prior for θ (document-topic distribution)
@@ -67,7 +67,7 @@ DP = D*Pd # total number of non-empty paragraphs
 β_true[3,7:9] .+= 50
 β_true ./= sum(β_true, dims=2)
 
-ω_true_post = reshape(repeat(ω_true,100),4,100)
+ω_true_post = reshape(repeat(ω_true,100),length(ω_true),100)
 plt = synth_data_plot(β_true, ω_true_post, true_ω = ω_true,
     topic_ord = [1,2,3], plt_title = "", legend = :right)
 savefig("figures/synth_true_model.pdf")
@@ -94,29 +94,30 @@ Z_bar_all[1:DP,:] = Z_bar_true
 
 ## Generate x regressors
 # Use word counts to define x so that it is correlated with topics
-x1 = zeros(NP,1)
-x2 = randn(N)
-x2 = reshape(repeat(x2, inner = Pd),(NP,1))
-x1[1:D*Pd] = Array(Float64.(word_counts[:,1]))
+#x1 = zeros(NP,1)
+x1 = zeros(N,1)
+x2 = randn(N,1)
+#x2 = reshape(repeat(x2, inner = Pd),(NP,1))
+x1[1:D] = group_mean(hcat(Array(Float64.(word_counts[:,1]))), doc_idx)
 x1 = (x1.-mean(x1))./std(x1)
 #x1 = reshape(repeat(vec(group_mean(x1, doc_idx)), inner = Pd),(NP,1))
-x = Array{Float64,2}(hcat(x1))
-ϵ_true = repeat(rand(Normal(0,sqrt(σ_y_true)), N),inner=Pd)
+x = Array{Float64,2}(hcat(x1,x2))
+ϵ_true = rand(Normal(0,sqrt(σ_y_true)), N)
 
 ## Generate interaction regressors
-inter_effects = zeros(NP,(K*size(x1,2)))
-for jj in 1:size(x1,2)
-    col_range= (jj*K-K+1):(jj*K)
-    inter_effects[:,col_range] = Z_bar_all.*vec(x[:,jj])
-end
+#inter_effects = zeros(NP,(K*size(x1,2)))
+#for jj in 1:size(x1,2)
+#    col_range= (jj*K-K+1):(jj*K)
+#    inter_effects[:,col_range] = Z_bar_all.*vec(x[:,jj])
+#end
 
 ## Aggregate interactions to paragraph level
 # Identify size and first member of each group
 Nps = counts(doc_idx)
 first_paras = findfirst_group(doc_idx)
 # Aggregate inter_effects and Z_bar (straight mean is fine as long as all docs have same number of paras)
-inter_effects = reshape(repeat(vec(group_mean(inter_effects, doc_idx)), inner = Pd),(NP,K))
-Z_bar_all =reshape(repeat(vec(group_mean(Z_bar_all, doc_idx)), inner = Pd),(NP,K))
+#inter_effects = reshape(vec(group_mean(inter_effects, doc_idx)),(N,K))
+Z_bar_all =reshape(vec(group_mean(Z_bar_all, doc_idx)),(N,K))
 
 
 ## Generate outcome variable
@@ -129,12 +130,13 @@ Test whether synthetic data gives correct coefficients in OLS regression with tr
 """
 ## Just observations with documents
 #regressors = hcat(Z_bar_all[1:D,:], inter_effects[1:D,:],x2[1:D,:])
-regressors = hcat(Z_bar_all[1:DP,:], x[1:DP,:])
-ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y[1:DP])
+regressors = hcat(Z_bar_all[1:D,:], x[1:D,:])
+ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y[1:D])
 display(ols_coeffs)
+mse_true = mean((y .- regressors*ols_coeffs).^2)
 
-regressors = hcat(Z_bar_all[1:DP,:])
-ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y[1:DP])
+regressors = hcat(Z_bar_all[1:D,:])
+ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y[1:D])
 display(ols_coeffs)
 mse_nox = mean((y .- regressors*ols_coeffs).^2)
 
@@ -164,57 +166,142 @@ Generate word count variable from DTM
 """
 list1 = ["1","test"]
 
-list1_counts = wordlist_counts(dtm_sparse,vocab,list1)
+list1_counts = hcat(Float64.(wordlistcounts(dtm_sparse.dtm,vocab,list1)))
+list1_counts = group_mean(list1_counts, doc_idx)
 list1_score = (list1_counts.-mean(list1_counts))./std(list1_counts)
 #list1_score = group_mean(list1_score,doc_idx)
 @assert list1_score == x1
 
 
 """
+Convert into an array of BTRParagraphDocument
+"""
+ntopics = 3
+NP, V = size(dtm_sparse.dtm)
+D = length(unique(doc_idx))
+btrdocs = Array{DocStructs.BTRParagraphDocument,1}(undef, D)
+topics = Array{DocStructs.Topic,1}(undef, ntopics)
+for ii in 1:ntopics
+    topics[ii] = DocStructs.Topic()
+end
+dtm_in = dtm_sparse.dtm
+DocStructs.BTRParagraphDocument(ntopics, y_dd, x_dd, 4,1)
+# Extract the documents and initialise the topic assignments
+function create_btrdocs(dtm_in::SparseMatrixCSC{Int64,Int64},
+        doc_idx::Array{Int64,1}, y::Array{Float64,1}, x::Array{Float64,2},
+        ntopics::Int64)
+    # Need doc_idx labels to be divorced from the indices themselves to fill the array
+    docidx_labels = unique(doc_idx)
+    D = length(unique(docidx_labels))
+    """
+    First, create the topic object that will keep track of assignments at the corpus level
+    """
+    # Empty array to be filled with Topics
+    topics = Array{DocStructs.Topic,1}(undef, ntopics)
+    # Iteratively fill with empty topics
+    for ii in 1:ntopics
+        topics[ii] = DocStructs.Topic()
+    end
+
+    """
+    Second, create the document objects that keep track of assignments at the document level
+    """
+    # Empty array to be filled with BTRParagraphDocuments
+    btrdocs = Array{DocStructs.BTRParagraphDocument,1}(undef, D)
+    # Iteratively will with random topics and paragraph-documents from dtm
+    prog = Progress(D, 1)
+    for dd in 1:D
+        idx = docidx_labels[dd]
+        dtm_paras = SparseMatrixCSC{Int64,Int64}(dtm_in[(doc_idx .== idx),:])
+        P_dd = size(dtm_paras,1)
+        x_dd = hcat(x[[dd],:])
+        y_dd = y[dd]
+        btr_document = DocStructs.BTRParagraphDocument(ntopics, y_dd, x_dd, P_dd, idx)
+        topic_base_paras = Array{DocStructs.TopicBasedDocument,1}(undef, P_dd)
+        for pp in 1:P_dd
+            individual_para = DocStructs.TopicBasedDocument(ntopics)
+            for wordid in 1:V
+                for _ in 1:dtm_paras[pp,wordid]
+                    topicid = rand(1:ntopics) # initial topic assignment
+                    update_target_topic = topics[topicid] # select relevant topic
+                    update_target_topic.count += 1 # add to total words in that topic
+                    update_target_topic.wordcount[wordid] = get(update_target_topic.wordcount, wordid, 0) + 1 # add to count for that word
+                    topics[topicid] = update_target_topic # update that topic
+                    push!(individual_para.topic, topicid) # add topic to document
+                    push!(individual_para.text, wordid) # add word to document
+                    individual_para.topicidcount[topicid] =  get(individual_para.topicidcount, topicid, 0) + 1 # add topic to topic count for document
+                    btr_document.topicidcount[topicid] = get(btr_document.topicidcount, topicid, 0) + 1 # add topic to topic count for document
+                end
+            end
+            btr_document.paragraphs[pp] = individual_para
+        end
+        btrdocs[dd] = btr_document # Populate the document array
+        next!(prog)
+    end
+
+    return btrdocs, topics, docidx_labels
+
+end
+
+btrdocs, topics, docidx_labels = create_btrdocs(dtm_in, doc_idx, y, x, ntopics)
+
+"""
 Split into test and training sets
 """
-## Randomly shuffle for training and test set indices (at whole document level)
-train_split = 0.75
-# Shuffle the *document* ids (remove shuffle if you want to split by original order)
-idx = shuffle(1:N)
-# Split these shuffled *document* ids into training and test sets
-train_docs = Array{Int64,1}(view(idx, 1:floor(Int, train_split*N)))
-test_docs = Array{Int64,1}(view(idx, (floor(Int, train_split*N+1):N)))
 
-train_idx = Array(1:NP)[(.!isnothing.(indexin(doc_idx, train_docs)))]
-test_idx = Array(1:NP)[(.!isnothing.(indexin(doc_idx, test_docs)))]
-
-
-## Split y and x into training and test
-x_train = x[train_idx,:]
-x_test = x[test_idx,:]
-y_train = y[train_idx]
-y_test = y[test_idx]
-
-## Split the document indices into training and test sets
-doc_idx_train = doc_idx[train_idx]
-doc_idx_test = doc_idx[test_idx]
-
-## Split the DTM into training and test
-dtm_train = dtm_sparse.dtm[train_idx,:]
-dtm_test = dtm_sparse.dtm[test_idx,:]
+"""
+Function to split data into test and training sets
+"""
+function btr_traintestsplit(dtm_in::SparseMatrixCSC{Int64,Int64},
+        doc_idx::Array{Int64,1}, y::Array{Float64,1};
+        x::Array{Float64,2} = zeros(1,1)
+        train_split::Float64 = 0.75, shuffle_obs::Bool = true)
+    # Extract total number of documents/observations
+    N::Int64 = length(unique(doc_idx))
+    # Shuffle the *document* ids (or don't if shuffle=false and we want to split by original order)
+    idx::Array{Int64,1} = 1:N
+    if shuffle_obs
+        idx = shuffle(idx)
+    end
+    # Separate indices into test and training
+    train_idx::Array{Int64,1} = Array{Int64,1}(view(idx, 1:floor(Int, train_split*N)))
+    test_idx::Array{Int64,1} = Array{Int64,1}(view(idx, (floor(Int, train_split*N+1):N)))
+    # Identify the doc_idx of the documents assigned to each set
+    train_docs::BitArray{1} = in.(doc_idx, [train_idx])
+    test_docs::BitArray{1} = in.(doc_idx, [train_idx])
+    # Split the document indices into training and test sets
+    doc_idx_train::Array{Int64,1} = doc_idx[train_docs]
+    doc_idx_test::Array{Int64,1} = doc_idx[test_docs]
+    # Split the DTM into training and test
+    dtm_train::SparseMatrixCSC{Int64,Int64} = dtm_sparse.dtm[train_docs,:]
+    dtm_test::SparseMatrixCSC{Int64,Int64} = dtm_sparse.dtm[test_idx,:]
+    # Split y (and x) into training and test
+    y_train = y[train_idx]
+    y_test = y[test_idx]
+    if size(x,1) == length(y)
+        x_train = x[train_idx,:]
+        x_test = x[test_idx,:]
+    else
+        display("No x variables provided")
+    end
 
 
 """
 Save the synthetic data to csv files
 """
 ## DataFrame for regression data
-df = DataFrame(doc_id = doc_idx,
+df = DataFrame(#doc_id = doc_idx,
                y = y,
                x1 = x[:,1],
-               #x2 = x[:,2],
-               theta1 = θ_all[1,:],
-               theta2 = θ_all[2,:],
-               theta3 = θ_all[3,:],
+               x2 = x[:,2],
+               #theta1 = θ_all[1,:],
+               #theta2 = θ_all[2,:],
+               #theta3 = θ_all[3,:],
                Z_bar1 = Z_bar_all[:,1],
                Z_bar2 = Z_bar_all[:,2],
                Z_bar3 = Z_bar_all[:,3],
-               text = docs_all)
+               #text = docs_all
+               )
 
 ## DataFrame for vocabulary
 vocab_df = DataFrame(term = vocab,
@@ -248,9 +335,9 @@ a_0 = 3. # residual shape: higher moves mean closer to zero
 b_0 = 0.2 # residual scale: higher is more spread out
 # Plot the prior distribution for residual variance (in case unfamiliar with InverseGamma distributions)
 # mean will be b_0/(a_0 - 1)
-display(plot(InverseGamma(a_0, b_0), xlim = (0,1), title = "Residual variance prior",
-    label = "Prior on residual variance"))
-scatter!([σ_y_true],[0.],label = "True residual variance")
+plot(InverseGamma(a_0, b_0), xlim = (0,1), title = "Residual variance prior",
+    label = "Prior on residual variance")
+display(scatter!([σ_y_true],[0.],label = "True residual variance"))
 savefig("figures/synthetic_IGprior.pdf")
 
 ## Number of iterations and convergence tolerance

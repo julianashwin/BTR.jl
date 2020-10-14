@@ -18,19 +18,17 @@ HIV_dicts = (
     Pleasure = Array(String.(skipmissing(unique(HIV_lists.Pleasure)))),
     Pain = Array(String.(skipmissing(unique(HIV_lists.Pain)))))
 
-"""
-Function that gets word counts from given list in DTM
-"""
-function wordlist_counts(dtm_sparse::DocumentTermMatrix,vocab::Array{String,1},list::Array{String,1})
-    # Convert DTM to dataframe
-    dtm_df = DataFrame(dtm(dtm_sparse, :dense))
-    rename!(dtm_df, Symbol.(vocab))
 
+"""
+Function to compute counts from word list using DTM
+"""
+function wordlistcounts(dtm_sparse::SparseMatrixCSC{Int64,Int64},vocab::Array{String,1},
+        wordlist::Array{String,1})
     # Remove words from list that don't appear in corpus
-    list_short = filter(x -> x in vocab,list)
-
+    list_short::Array{String,1} = filter(x -> x in vocab,wordlist)
+    # Identify which columns of the DTM we need to sum over
+    list_index::BitArray{1} = in.(vocab, [list_short])
     # Count word frequencies per document
-    word_score = sum(Array(dtm_df[:,Symbol.(list_short)]),dims=2)
-
+    word_score::Array{Int64,1} = vec(sum(Array(dtm_sparse[:,list_index]),dims=2))
     return word_score
 end

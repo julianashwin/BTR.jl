@@ -1,36 +1,15 @@
-module BTR
-
 using SparseArrays, LinearAlgebra, CSV, KernelDensity
 using Random, Distributions, DataFrames, GLM, StatsBase, JSON
 using TextAnalysis, Plots, ProgressMeter, ColorSchemes, Plots.PlotMeasures
 
 
-export foo, bar
-export Lda
-export AbstractDocument, Document
-export FileDocument, StringDocument, TokenDocument, NGramDocument
-export GenericDocument
-export Corpus, DirectoryCorpus
-export DocumentTermMatrix
-export BTR_EMGibbs, BTR_Gibbs, BTR_EMGibbs_paras
-export BTR_Gibbs_predict, BTR_Gibbs_predict_paras
-export LDA_Gibbs, LDA_Gibbs_predict
-export wordlist_counts, LM_dicts, HIV_dicts
-#export LM_dicts, HIV_dicts
-# From aux_functions
-export multinomial_draw, replace_nan!
-export create_inter_effects, group_mean, group_sum, findfirst_group
-export generate_docs, synth_reorder_topics
-export coef_plot, synth_data_plot, BTR_plot, plot_topics
-export BLR, BLR_Gibbs
 
+"""
+Document and topic structures used to store the data
+"""
+module DocStructs
 
-
-
-
-# Lda structures used throughout
-module Lda
-
+# Structure to keep track of assignments at the paragraph level
 mutable struct TopicBasedDocument
     topic::Vector{Int}
     text::Vector{Int}
@@ -38,17 +17,24 @@ mutable struct TopicBasedDocument
 end
 TopicBasedDocument(ntopics) = TopicBasedDocument(Vector{Int}(), Vector{Int}(), zeros(Int, ntopics))
 
+# Structure to keep track of assignments at the document level
 mutable struct BTRParagraphDocument
-    topic::Vector{Int}
     paragraphs::Vector{TopicBasedDocument}
     topicidcount::Vector{Int}
     y::Float64
     x::Array{Float64,2}
+    idx::Int64
 end
-BTRParagraphDocument(ntopics, y, x) = BTRParagraphDocument(Vector{Int}(), Vector{TopicBasedDocument}(),
-    zeros(Int, ntopics), y, x)
+BTRParagraphDocument(ntopics, y, x) = BTRParagraphDocument(Vector{TopicBasedDocument}(),
+    zeros(Int, ntopics), y, x, 0)
+BTRParagraphDocument(ntopics, y, x, P, docidx) = BTRParagraphDocument(Vector{TopicBasedDocument}(undef,P),
+    zeros(Int, ntopics), y, x, 0)
+BTRParagraphDocument(ntopics, y, x, P, docidx) = BTRParagraphDocument(Vector{TopicBasedDocument}(undef,P),
+    zeros(Int, ntopics), y, x, docidx)
 
 
+
+# Structure to keep track of assignments at the corpus level
 mutable struct Topic
     count::Int
     wordcount::Dict{Int, Int}
@@ -71,5 +57,3 @@ include("BTR_sentiment.jl")
 foo(x::T, y::T) where T <: Real = x + y - 5
 bar(z::Float64) = foo(sqrt(z), z)
 greet() = print("Hello World!")
-
-end # BTR module
