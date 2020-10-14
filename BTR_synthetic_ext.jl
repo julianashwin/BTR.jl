@@ -177,15 +177,7 @@ list1_score = (list1_counts.-mean(list1_counts))./std(list1_counts)
 Convert into an array of BTRParagraphDocument
 """
 ntopics = 3
-NP, V = size(dtm_sparse.dtm)
-D = length(unique(doc_idx))
-btrdocs = Array{DocStructs.BTRParagraphDocument,1}(undef, D)
-topics = Array{DocStructs.Topic,1}(undef, ntopics)
-for ii in 1:ntopics
-    topics[ii] = DocStructs.Topic()
-end
 dtm_in = dtm_sparse.dtm
-DocStructs.BTRParagraphDocument(ntopics, y_dd, x_dd, 4,1)
 # Extract the documents and initialise the topic assignments
 function create_btrdocs(dtm_in::SparseMatrixCSC{Int64,Int64},
         doc_idx::Array{Int64,1}, y::Array{Float64,1}, x::Array{Float64,2},
@@ -242,8 +234,16 @@ function create_btrdocs(dtm_in::SparseMatrixCSC{Int64,Int64},
     return btrdocs, topics, docidx_labels
 
 end
+create_btrdocs(rawdata::DocStructs.BTRRawData, ntopics::Int64) =
+    create_btrdocs(rawdata.dtm, rawdata.doc_idx, rawdata.y, rawdata.x, ntopics)
+
 
 btrdocs, topics, docidx_labels = create_btrdocs(dtm_in, doc_idx, y, x, ntopics)
+rawdata = DocStructs.BTRRawData(dtm_in, doc_idx, y, x)
+
+btrdocs, topics, docidx_labels = create_btrdocs(rawdata, ntopics)
+
+
 
 """
 Split into test and training sets
@@ -254,7 +254,7 @@ Function to split data into test and training sets
 """
 function btr_traintestsplit(dtm_in::SparseMatrixCSC{Int64,Int64},
         doc_idx::Array{Int64,1}, y::Array{Float64,1};
-        x::Array{Float64,2} = zeros(1,1)
+        x::Array{Float64,2} = zeros(1,1),
         train_split::Float64 = 0.75, shuffle_obs::Bool = true)
     # Extract total number of documents/observations
     N::Int64 = length(unique(doc_idx))
@@ -276,14 +276,25 @@ function btr_traintestsplit(dtm_in::SparseMatrixCSC{Int64,Int64},
     dtm_train::SparseMatrixCSC{Int64,Int64} = dtm_sparse.dtm[train_docs,:]
     dtm_test::SparseMatrixCSC{Int64,Int64} = dtm_sparse.dtm[test_idx,:]
     # Split y (and x) into training and test
-    y_train = y[train_idx]
-    y_test = y[test_idx]
+    y_train::Array{Float64,1} = y[train_idx]
+    y_test::Array{Float64,1} = y[test_idx]
+    x_train::Array{Float64,2} = zeros(1,1)
+    x_test::Array{Float64,2} = zeros(1,1)
     if size(x,1) == length(y)
         x_train = x[train_idx,:]
         x_test = x[test_idx,:]
     else
         display("No x variables provided")
     end
+
+    train_data = DocStructs.BTRRawData(dtm_train, doc_idx_train, y_train, x_train)
+    test_data = DocStructs.BTRRawData(dtm_test, doc_idx_test, y_test, x_test)
+    return train_data, test_data
+
+end
+train_data = btr_traintestsplit(dtm_in, doc_idx, y, x = x)
+
+train_data, test_data = btr_traintestsplit(dtm_in, doc_idx, y, x = x)
 
 
 """

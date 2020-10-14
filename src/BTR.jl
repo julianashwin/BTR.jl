@@ -57,8 +57,13 @@ Topic() = Topic(0, Dict{Int, Int}())
 
 end
 
+# Structures
+include("BTR_structs.jl")
+
 # Import various functions
+include("BTR_preprocessing.jl")
 include("BTR_aux_functions.jl")
+include("BTR_visualisation.jl")
 include("BTR_Gibbs.jl")
 include("BTR_EMGibbs.jl")
 include("BTR_EMGibbs_paras.jl")
