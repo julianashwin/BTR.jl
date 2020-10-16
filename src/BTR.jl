@@ -5,6 +5,10 @@ using Random, Distributions, DataFrames, GLM, StatsBase, JSON
 using TextAnalysis, Plots, ProgressMeter, ColorSchemes, Plots.PlotMeasures
 
 
+"""
+Add Parameters.jl to the manifest!!!!!
+"""
+
 export foo, bar
 export Lda
 export AbstractDocument, Document
@@ -37,17 +41,6 @@ mutable struct TopicBasedDocument
     topicidcount::Vector{Int}
 end
 TopicBasedDocument(ntopics) = TopicBasedDocument(Vector{Int}(), Vector{Int}(), zeros(Int, ntopics))
-
-mutable struct BTRParagraphDocument
-    topic::Vector{Int}
-    paragraphs::Vector{TopicBasedDocument}
-    topicidcount::Vector{Int}
-    y::Float64
-    x::Array{Float64,2}
-end
-BTRParagraphDocument(ntopics, y, x) = BTRParagraphDocument(Vector{Int}(), Vector{TopicBasedDocument}(),
-    zeros(Int, ntopics), y, x)
-
 
 mutable struct Topic
     count::Int

@@ -27,10 +27,15 @@ include("src/BTR_dev.jl")
 using TextAnalysis, DataFrames, CSV
 using StatsPlots, StatsBase, Plots.PlotMeasures, Distributions, Random
 
+
+"""
+Plotting options
+"""
 # This sets the plotting backend: gr() is faster, pyplot() is prettier
 gr()
 #pyplot()
 #plotly()
+save_files = false # Toggle whether you want to save figures and data as files
 
 """
 Generate some synthetic data
@@ -60,23 +65,14 @@ DP = D*Pd # total number of non-empty paragraphs
 
 ## Draw latent variables θ and β
 θ_true = rand(Dirichlet(K,α),DP)
+θ_true = θ_true[:, sortperm(θ_true[1,:])]
 θ_all = hcat(θ_true, (1/K).*ones(K,(NP-DP)))
-β_true = η*ones(K,V)
-β_true[1,1:3] .+= 50
-β_true[2,4:6] .+= 50
-β_true[3,7:9] .+= 50
-β_true ./= sum(β_true, dims=2)
-
-ω_true_post = reshape(repeat(ω_true,100),length(ω_true),100)
-plt = synth_data_plot(β_true, ω_true_post, true_ω = ω_true,
-    topic_ord = [1,2,3], plt_title = "", legend = :right)
-savefig("figures/synth_true_model.pdf")
-
+β_true = bartopics(η, K, V)
 
 heatmap(β_true, title = "", xlabel = "Vocab", ylabel = "Topic", yticks = 1:K,
     left_margin = 3mm,top_margin = 3mm, bottom_margin = 0mm)
-plot!(size =(200,300))
-savefig("figures/synth_true_beta.pdf")
+display(plot!(size =(200,300)))
+if save_files; savefig("figures/synth_true_beta.pdf"); end;
 
 ## Generate string documents and topic assignments
 docs, Z_true, topic_counts, word_counts = generate_docs(DP, Np, K, θ_true, β_true)
@@ -140,6 +136,11 @@ ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y[1:D]
 display(ols_coeffs)
 mse_nox = mean((y .- regressors*ols_coeffs).^2)
 
+regressors = hcat(ones(D),x)
+ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y[1:D])
+display(ols_coeffs)
+mse_noz = mean((y .- regressors*ols_coeffs).^2)
+
 
 ## All observations
 #regressors = hcat(Z_bar_all, inter_effects,x2)
@@ -172,131 +173,6 @@ list1_score = (list1_counts.-mean(list1_counts))./std(list1_counts)
 #list1_score = group_mean(list1_score,doc_idx)
 @assert list1_score == x1
 
-
-"""
-Convert into an array of BTRParagraphDocument
-"""
-ntopics = 3
-dtm_in = dtm_sparse.dtm
-# Extract the documents and initialise the topic assignments
-function create_btrdocs(dtm_in::SparseMatrixCSC{Int64,Int64},
-        doc_idx::Array{Int64,1}, y::Array{Float64,1}, x::Array{Float64,2},
-        ntopics::Int64)
-    # Need doc_idx labels to be divorced from the indices themselves to fill the array
-    docidx_labels = unique(doc_idx)
-    D = length(unique(docidx_labels))
-    """
-    First, create the topic object that will keep track of assignments at the corpus level
-    """
-    # Empty array to be filled with Topics
-    topics = Array{DocStructs.Topic,1}(undef, ntopics)
-    # Iteratively fill with empty topics
-    for ii in 1:ntopics
-        topics[ii] = DocStructs.Topic()
-    end
-
-    """
-    Second, create the document objects that keep track of assignments at the document level
-    """
-    # Empty array to be filled with BTRParagraphDocuments
-    btrdocs = Array{DocStructs.BTRParagraphDocument,1}(undef, D)
-    # Iteratively will with random topics and paragraph-documents from dtm
-    prog = Progress(D, 1)
-    for dd in 1:D
-        idx = docidx_labels[dd]
-        dtm_paras = SparseMatrixCSC{Int64,Int64}(dtm_in[(doc_idx .== idx),:])
-        P_dd = size(dtm_paras,1)
-        x_dd = hcat(x[[dd],:])
-        y_dd = y[dd]
-        btr_document = DocStructs.BTRParagraphDocument(ntopics, y_dd, x_dd, P_dd, idx)
-        topic_base_paras = Array{DocStructs.TopicBasedDocument,1}(undef, P_dd)
-        for pp in 1:P_dd
-            individual_para = DocStructs.TopicBasedDocument(ntopics)
-            for wordid in 1:V
-                for _ in 1:dtm_paras[pp,wordid]
-                    topicid = rand(1:ntopics) # initial topic assignment
-                    update_target_topic = topics[topicid] # select relevant topic
-                    update_target_topic.count += 1 # add to total words in that topic
-                    update_target_topic.wordcount[wordid] = get(update_target_topic.wordcount, wordid, 0) + 1 # add to count for that word
-                    topics[topicid] = update_target_topic # update that topic
-                    push!(individual_para.topic, topicid) # add topic to document
-                    push!(individual_para.text, wordid) # add word to document
-                    individual_para.topicidcount[topicid] =  get(individual_para.topicidcount, topicid, 0) + 1 # add topic to topic count for document
-                    btr_document.topicidcount[topicid] = get(btr_document.topicidcount, topicid, 0) + 1 # add topic to topic count for document
-                end
-            end
-            btr_document.paragraphs[pp] = individual_para
-        end
-        btrdocs[dd] = btr_document # Populate the document array
-        next!(prog)
-    end
-
-    return btrdocs, topics, docidx_labels
-
-end
-create_btrdocs(rawdata::DocStructs.BTRRawData, ntopics::Int64) =
-    create_btrdocs(rawdata.dtm, rawdata.doc_idx, rawdata.y, rawdata.x, ntopics)
-
-
-btrdocs, topics, docidx_labels = create_btrdocs(dtm_in, doc_idx, y, x, ntopics)
-rawdata = DocStructs.BTRRawData(dtm_in, doc_idx, y, x)
-
-btrdocs, topics, docidx_labels = create_btrdocs(rawdata, ntopics)
-
-
-
-"""
-Split into test and training sets
-"""
-
-"""
-Function to split data into test and training sets
-"""
-function btr_traintestsplit(dtm_in::SparseMatrixCSC{Int64,Int64},
-        doc_idx::Array{Int64,1}, y::Array{Float64,1};
-        x::Array{Float64,2} = zeros(1,1),
-        train_split::Float64 = 0.75, shuffle_obs::Bool = true)
-    # Extract total number of documents/observations
-    N::Int64 = length(unique(doc_idx))
-    # Shuffle the *document* ids (or don't if shuffle=false and we want to split by original order)
-    idx::Array{Int64,1} = 1:N
-    if shuffle_obs
-        idx = shuffle(idx)
-    end
-    # Separate indices into test and training
-    train_idx::Array{Int64,1} = Array{Int64,1}(view(idx, 1:floor(Int, train_split*N)))
-    test_idx::Array{Int64,1} = Array{Int64,1}(view(idx, (floor(Int, train_split*N+1):N)))
-    # Identify the doc_idx of the documents assigned to each set
-    train_docs::BitArray{1} = in.(doc_idx, [train_idx])
-    test_docs::BitArray{1} = in.(doc_idx, [train_idx])
-    # Split the document indices into training and test sets
-    doc_idx_train::Array{Int64,1} = doc_idx[train_docs]
-    doc_idx_test::Array{Int64,1} = doc_idx[test_docs]
-    # Split the DTM into training and test
-    dtm_train::SparseMatrixCSC{Int64,Int64} = dtm_sparse.dtm[train_docs,:]
-    dtm_test::SparseMatrixCSC{Int64,Int64} = dtm_sparse.dtm[test_idx,:]
-    # Split y (and x) into training and test
-    y_train::Array{Float64,1} = y[train_idx]
-    y_test::Array{Float64,1} = y[test_idx]
-    x_train::Array{Float64,2} = zeros(1,1)
-    x_test::Array{Float64,2} = zeros(1,1)
-    if size(x,1) == length(y)
-        x_train = x[train_idx,:]
-        x_test = x[test_idx,:]
-    else
-        display("No x variables provided")
-    end
-
-    train_data = DocStructs.BTRRawData(dtm_train, doc_idx_train, y_train, x_train)
-    test_data = DocStructs.BTRRawData(dtm_test, doc_idx_test, y_test, x_test)
-    return train_data, test_data
-
-end
-train_data = btr_traintestsplit(dtm_in, doc_idx, y, x = x)
-
-train_data, test_data = btr_traintestsplit(dtm_in, doc_idx, y, x = x)
-
-
 """
 Save the synthetic data to csv files
 """
@@ -313,24 +189,28 @@ df = DataFrame(#doc_id = doc_idx,
                Z_bar3 = Z_bar_all[:,3],
                #text = docs_all
                )
-
-## DataFrame for vocabulary
-vocab_df = DataFrame(term = vocab,
-               term_id = 1:V)
-
-## DataFrame for Document-Term-Matrix
-dtm_mat = DataFrame(dtm(dtm_sparse, :dense))
-rename!(dtm_mat, vocab)
-
-## Write to CSV
-CSV.write("data/documents.csv", df)
-CSV.write("data/vocab.csv", vocab_df)
-CSV.write("data/dtm.csv", dtm_mat)
-
+if save_files
+    dtmtodfs(dtm_sparse.dtm, doc_idx, vocab, save_dir = "data")
+    CSV.write("data/synth_data.csv", df)
+end
 
 
 """
-Set priors and options here to be consistent across models
+Split into training and test sets (by doc_idx) and convert to BTRRawData structure
+"""
+dtm_in = dtm_sparse.dtm
+train_data, test_data = btr_traintestsplit(dtm_in, doc_idx, y, x = x,
+    train_split = 0.75, shuffle_obs = true)
+# Alternatively, can convert the entier set to BTRRawData with
+# train_data = DocStructs.BTRRawData(dtm_in, doc_idx, y, x)
+## Visualise the training-test split
+histogram(train_data.doc_idx, bins = 1:N, label = "training set",
+    xlab = "Observation", ylab= "Paragraphs", c=1, lc=1)
+display(histogram!(test_data.doc_idx, bins = 1:N, label = "test set", c=2, lc=2))
+if save_files; savefig("figures/synth_trainsplit.pdf"); end;
+
+"""
+Set priors and hyperparameters here to be consistent across models
 """
 ## Number of topics
 ntopics = 3
@@ -349,37 +229,107 @@ b_0 = 0.2 # residual scale: higher is more spread out
 plot(InverseGamma(a_0, b_0), xlim = (0,1), title = "Residual variance prior",
     label = "Prior on residual variance")
 display(scatter!([σ_y_true],[0.],label = "True residual variance"))
-savefig("figures/synthetic_IGprior.pdf")
+if save_files; savefig("figures/synthetic_IGprior.pdf"); end;
 
+
+
+"""
+Convert to arrays of BTRParagraphDocument
+"""
+btrdocs_tr, topics_tr, doclabels_tr = create_btrdocs(train_data, ntopics)
+btrdocs_ts, topics_ts, doclabels_ts = create_btrdocs(test_data, ntopics)
+# Can also create_btrdocs without the BTRRawData structure with
+#btrdocs_tr, topics_tr, doclabels_tr = create_btrdocs(dtm_in, doc_idx, y, x, ntopics)
+
+
+"""
+Set the estimation options here, to be consistent across models
+"""
 ## Number of iterations and convergence tolerance
-E_iteration = 500 # E-step iterations (sampling topic assignments, z)
-M_iteration = 2500 # M-step iterations (sampling regression coefficients residual variance)
-EM_iteration = 100 # Maximum possible EM iterations (will stop here if no convergence)
+E_iters = 500 # E-step iterations (sampling topic assignments, z)
+M_iters = 2500 # M-step iterations (sampling regression coefficients residual variance)
+EM_iters = 100 # Maximum possible EM iterations (will stop here if no convergence)
 EM_split = 0.5 # Split for separate E and M step batches (if batch = true)
 burnin = 100 # Burnin for Gibbs samplers
 ω_tol = 0.005 # Convergence tolerance for regression coefficients ω
-
 
 
 """
 Run some text-free regressions for benchmarking
 """
 ## Define regressors
-# Non-fe version will have a constant (which will be replaced by the topics later)
-regressors_train = hcat(ones(size(x_train,1)),x_train)
-regressors_test = hcat(ones(size(x_test,1)),x_test)
+regressors_train = hcat(ones(size(train_data.x,1)),train_data.x)
+regressors_test = hcat(ones(size(test_data.x,1)),test_data.x)
 
 ## OLS
-ols_coeffs = inv(transpose(regressors_train)*regressors_train)*(transpose(regressors_train)*y_train)
-mse_ols = mean((y_test .- regressors_test*ols_coeffs).^2)
+ols_coeffs = inv(transpose(regressors_train)*regressors_train)*(transpose(regressors_train)*train_data.y)
+mse_ols = mean((test_data.y .- regressors_test*ols_coeffs).^2)
 
 ## Bayesian linear regression
-blr_coeffs_post, σ2_post = BLR_Gibbs(y_train, regressors_train, iteration = M_iteration,
+blr_coeffs_post, σ2_post = BLR_Gibbs(train_data.y, regressors_train, iteration = M_iters,
     m_0 = μ_ω, V_0 = σ_ω, a_0 = a_0, b_0 = b_0)
 blr_coeffs = Array{Float64,1}(vec(mean(blr_coeffs_post, dims = 2)))
 
 predict_blr = regressors_test*blr_coeffs
-mse_blr = mean((y_test .- predict_blr).^2)
+mse_blr = mean((test_data.y .- predict_blr).^2)
+
+topics_tr1 = gettopics(btrdocs_tr,ntopics)
+topics_tr1 = gettopics(btrdocs_tr,4)
+
+
+"""
+Estimate BTR
+"""
+btrmodel = DocStructs.BTRModel(btrdocs_tr, topics_tr, vocab, K, zeros(K,V), zeros(K,length(btrdocs_tr)), zeros(K,100), zeros(100))
+btrmodel = DocStructs.BTRModel(btrdocs_tr, length(vocab), ntopics)
+
+dtm_in = SparseMatrixCSC{Int64,Int64}(dtm_in)
+ntopics = Int64(ntopics)
+y = Array{Float64,1}(train_data.y);
+x = Array{Float64,2}(train_data.x) # = zeros(1,1),
+doc_idx = Array{Int64,1}(train_data.doc_idx) # = [0],
+σ2 = Float64(0.) # = 0.,
+α  = Float64(α) # =1.,
+η = Float64(η) # = 1.,
+σ_ω = Float64(σ_ω) # = 1.,
+μ_ω = Float64(μ_ω) # = 0.,
+a_0 = Float64(a_0) # = 0.,
+b_0 = Float64(b_0)  # = 0.,
+E_iters = Int64(E_iters) # = 100,
+M_iters = Int64(M_iters) # = 500,
+EM_iters = Int64(EM_iters) # = 10,
+burnin = Int64(burnin) # = 10,
+topics_init = Array(Array{Main.DocStructs.Topic,1}(undef, 1)) # = Array{Main.DocStructs.Topic,1}(undef, 1),
+docs_init = Array(Array{Main.DocStructs.TopicBasedDocument,1}(undef, 1)) # = Array{Main.DocStructs.TopicBasedDocument,1}(undef, 1),
+ω_init = Array{Float64,1}(zeros(1)) # = zeros(1),
+ω_tol = Float64(0.01) # = 0.01,
+rel_tol = Bool(true) # = false,
+interactions = Array{Int64,1}([]) # =Array{Int64,1}([]),
+xreg = Array{Int64,1}([1,2]) # Array{Int64,1}([])
+CVEM = Bool(false) # =false,
+CVEM_split = Float64(0.75) # = 0.75,
+leave_one_topic_out = Bool(false) # =false,
+plot_ω = Bool(true) # = false
+
+btrdocs = btrdocs_tr
+topics = gettopics(btrdocs, ntopics)
+
+
+@assert length(interactions) <= length(xreg) "Can't have more interactions than x variables"
+J = length(xreg)
+J_inter = length(interactions)*ntopics
+J_nointer = J - length(interactions) # Can we drop this?
+no_interactions = setdiff(1:J, interactions)
+
+N = length(btrmodel.docs)
+V = length(btrmodel.vocab)
+
+
+
+
+
+
+
 
 
 

@@ -3,6 +3,35 @@ This file contains functions used to preprocess data for Bayesian Topic Regressi
 """
 
 """
+Function to create saveable dataframes for dtm and corpus metadata
+"""
+function dtmtodfs(dtm_in::SparseMatrixCSC{Int64,Int64}, doc_idx::Array{Int64,1},
+        vocab::Array{String,1}; docnames::Array{String,1} = [""], save_dir::String = "")
+    # Convert DTM sparse matrix into dataframe
+    Is, Js, Vs = findnz(dtm_in)
+    dtm_df = DataFrame([:I => Is, :J => Js, :V => Vs])
+
+    # Create dataframe with rowids and metadata that corresponds to the DTM
+    rowids = 1:size(dtm_in,1)
+    if !(length(docnames) == rowids)
+        docnames = string.(rowids)
+    end
+    rowid_df = DataFrame(id=rowids, name=docnames, docidx=doc_idx)
+
+    # Create dataframe with terms in the vocab corresponding to the DTM
+    vocab_df = DataFrame(term = vocab, term_id = 1:size(dtm_in,2))
+
+    if save_dir != ""
+        CSV.write(join([save_dir,"/rowids.csv"]), rowid_df)
+        CSV.write(join([save_dir,"/terms.csv"]), vocab_df)
+        CSV.write(join([save_dir,"/dtm.csv"]), dtm_df)
+    end
+    return dtm_df, rowid_df, vocab_df
+end
+
+
+
+"""
 Function to split data into test and training sets
 """
 function btr_traintestsplit(dtm_in::SparseMatrixCSC{Int64,Int64},
@@ -21,13 +50,13 @@ function btr_traintestsplit(dtm_in::SparseMatrixCSC{Int64,Int64},
     test_idx::Array{Int64,1} = Array{Int64,1}(view(idx, (floor(Int, train_split*N+1):N)))
     # Identify the doc_idx of the documents assigned to each set
     train_docs::BitArray{1} = in.(doc_idx, [train_idx])
-    test_docs::BitArray{1} = in.(doc_idx, [train_idx])
+    test_docs::BitArray{1} = in.(doc_idx, [test_idx])
     # Split the document indices into training and test sets
     doc_idx_train::Array{Int64,1} = doc_idx[train_docs]
     doc_idx_test::Array{Int64,1} = doc_idx[test_docs]
     # Split the DTM into training and test
     dtm_train::SparseMatrixCSC{Int64,Int64} = dtm_sparse.dtm[train_docs,:]
-    dtm_test::SparseMatrixCSC{Int64,Int64} = dtm_sparse.dtm[test_idx,:]
+    dtm_test::SparseMatrixCSC{Int64,Int64} = dtm_sparse.dtm[test_docs,:]
     # Split y (and x) into training and test
     y_train::Array{Float64,1} = y[train_idx]
     y_test::Array{Float64,1} = y[test_idx]
@@ -109,6 +138,30 @@ end
 create_btrdocs(rawdata::DocStructs.BTRRawData, ntopics::Int64) =
     create_btrdocs(rawdata.dtm, rawdata.doc_idx, rawdata.y, rawdata.x, ntopics)
 
+
+"""
+Function to extract DocStructs.Topic objects from
+"""
+function gettopics(btrdocs::Array{DocStructs.BTRParagraphDocument,1},ntopics::Int64)
+    all_paras = vcat(map(x -> x.paragraphs, btrdocs)...)
+    # Empty array to be filled with Topics
+    topics = Array{DocStructs.Topic,1}(undef, ntopics)
+    for ii in 1:ntopics
+        topics[ii] = DocStructs.Topic()
+    end
+    # Iteratively fill with empty topics
+    for para in all_paras
+        N_p = length(para.text)
+        for nn in 1:N_p
+            word = para.text[nn]
+            assigned = para.topic[nn]
+            update_topic = topics[assigned]
+            update_topic.wordcount[word] = get(update_topic.wordcount, word, 0) + 1 # add to count for that word
+            update_topic.count += 1
+        end
+    end
+    return topics
+end
 
 
 

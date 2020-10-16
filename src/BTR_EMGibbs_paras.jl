@@ -13,13 +13,13 @@ function BTR_EMGibbs_paras(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
     topics_init::Array = Array{Main.Lda.Topic,1}(undef, 1),
     docs_init::Array = Array{Main.Lda.TopicBasedDocument,1}(undef, 1),
     ω_init::Array{Float64,1} = zeros(1), ω_tol::Float64 = 0.01, rel_tol::Bool = false,
-    interactions::Array{Int64,1}=Array{Int64,1}([]), batch::Bool=false, EM_split::Float64 = 0.75,
+    interactions::Array{Int64,1}=Array{Int64,1}([]), CVEM::Bool=false, CVEM_split::Float64 = 0.75,
     leave_one_topic_out::Bool=false, plot_ω::Bool = false)
 
     # Define EM split
-    if batch
-        E_idx = 1:Int(round(EM_split*size(dtm_in,1)))
-        M_idx = Int(round(EM_split*size(dtm_in,1)))+1:size(dtm_in,1)
+    if CVEM
+        E_idx = 1:Int(round(CVEM_split*size(dtm_in,1)))
+        M_idx = Int(round(CVEM_split*size(dtm_in,1)))+1:size(dtm_in,1)
     else
         E_idx = 1:size(dtm_in,1)
         M_idx = 1:size(dtm_in,1)
@@ -321,7 +321,7 @@ function BTR_EMGibbs_paras(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
         @assert any(Z_bar_avg.!= 1/ntopics) "Need some documents in each step"
 
         # M step (Z first, then x)
-        if batch
+        if CVEM
             display(join(["M step topic assignments"]))
             Z_bar_Mstep =
                 LDA_Gibbs_predict(dtm_Mstep, ntopics, β_avg,

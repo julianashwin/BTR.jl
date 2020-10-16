@@ -99,9 +99,24 @@ function findfirst_group(groups)
 end
 
 
-
-
-
+"""
+Function that generate bar topics for synthetic data
+"""
+function bartopics(η::Float64, K::Int64, Y::Int64)
+    β::Array{Float64,2} = η.*zeros(K,V)
+    toplength::Int64 = floor(Int, V/K)
+    start::Int64 = 1
+    for kk in 1:K
+        if kk < K
+            β[kk,start:(start+toplength-1)] .+= 50
+            start += toplength
+        elseif kk == K
+            β[kk,start:V] .+= 50
+        end
+    end
+    β ./= sum(β, dims=2)
+    return β
+end
 
 
 """
@@ -127,25 +142,6 @@ function generate_docs(D, Nd, K, θ_true, β_true)
     end
     return docs, Z, topic_counts, word_counts
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -232,3 +228,9 @@ function BLR_Gibbs(y::Array{Float64,1},x::Array{Float64,2};
     return β[:,(burnin+1):(burnin+iteration)], σ2[(burnin+1):(burnin+iteration)]
 
 end
+
+
+
+"""
+End of script
+"""

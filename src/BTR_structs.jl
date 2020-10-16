@@ -7,7 +7,7 @@ Document and topic structures used to store the data
 """
 module DocStructs
 
-using SparseArrays
+using SparseArrays, Parameters
 
 # Structure including all the raw data to estimate BTR
 mutable struct BTRRawData
@@ -44,13 +44,31 @@ BTRParagraphDocument(ntopics, y, x, P, docidx) = BTRParagraphDocument(Vector{Top
 BTRParagraphDocument(ntopics, y, x, P, docidx) = BTRParagraphDocument(Vector{TopicBasedDocument}(undef,P),
     zeros(Int, ntopics), y, x, docidx)
 
-
-
 # Structure to keep track of assignments at the corpus level
 mutable struct Topic
     count::Int
     wordcount::Dict{Int, Int}
 end
 Topic() = Topic(0, Dict{Int, Int}())
+
+
+# Structure to keep track of the model itself
+@with_kw mutable struct BTRModel
+    docs::Vector{BTRParagraphDocument};
+    topics::Vector{Topic};
+    vocab::Vector{String};
+    K::Int64;
+    β::Array{Float64,2};
+    Z_bar::Array{Float64,2};
+    ω_post::Array{Float64,2};
+    σ2_post::Array{Float64,1};
+    E_iter::Int64 = 100;
+    M_iter::Int64 = 500;
+    EM_iter::Int64 = 10;
+end
+BTRModel(docs, topics, vocab, K::Int64) = BTRModel(
+    docs, topics, vocab, K, zeros(K,length(vocab)), zeros(K,length(docs)), zeros(K,100), zeros(100)
+)
+
 
 end
