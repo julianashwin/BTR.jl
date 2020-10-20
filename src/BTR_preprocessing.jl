@@ -46,11 +46,14 @@ function btr_traintestsplit(dtm_in::SparseMatrixCSC{Int64,Int64},
         idx = shuffle(idx)
     end
     # Separate indices into test and training
-    train_idx::Array{Int64,1} = Array{Int64,1}(view(idx, 1:floor(Int, train_split*N)))
-    test_idx::Array{Int64,1} = Array{Int64,1}(view(idx, (floor(Int, train_split*N+1):N)))
+    train_obs::Array{Int64,1} = Array{Int64,1}(view(idx, 1:floor(Int, train_split*N)))
+    test_obs::Array{Int64,1} = setdiff(idx, train_idx)
     # Identify the doc_idx of the documents assigned to each set
-    train_docs::BitArray{1} = in.(doc_idx, [train_idx])
-    test_docs::BitArray{1} = in.(doc_idx, [test_idx])
+    train_docs::BitArray{1} = in.(doc_idx, [train_obs])
+    test_docs::BitArray{1} = in.(doc_idx, [test_obs])
+    # Identify the indices that will be assigned to train and test
+    train_idx::BitArray{1} = in.(Array(1:N),[train_obs])
+    test_idx::BitArray{1} = in.(Array(1:N),[test_obs])
     # Split the document indices into training and test sets
     doc_idx_train::Array{Int64,1} = doc_idx[train_docs]
     doc_idx_test::Array{Int64,1} = doc_idx[test_docs]
@@ -63,8 +66,13 @@ function btr_traintestsplit(dtm_in::SparseMatrixCSC{Int64,Int64},
     x_train::Array{Float64,2} = zeros(1,1)
     x_test::Array{Float64,2} = zeros(1,1)
     if size(x,1) == length(y)
+        display("x variables defined at whole document level")
         x_train = x[train_idx,:]
         x_test = x[test_idx,:]
+    elseif size(x,1) == size(dtm_in,1)
+        display("x variables defined at the paragraph level")
+        x_train = x[train_docs,:]
+        x_test = x[test_docs,:]
     else
         display("No x variables provided")
     end
@@ -80,12 +88,13 @@ end
 """
 Function that converts raw data into BTRdocs format
 """
-function create_btrdocs(dtm_in::SparseMatrixCSC{Int64,Int64},
+function create_btrcrps(dtm_in::SparseMatrixCSC{Int64,Int64},
         doc_idx::Array{Int64,1}, y::Array{Float64,1}, x::Array{Float64,2},
         ntopics::Int64)
     # Need doc_idx labels to be divorced from the indices themselves to fill the array
     docidx_labels = unique(doc_idx)
-    D = length(unique(docidx_labels))
+    D::Int64 = length(unique(docidx_labels))
+    V::Int64 = size(dtm_in,2)
     """
     First, create the topic object that will keep track of assignments at the corpus level
     """
@@ -132,17 +141,21 @@ function create_btrdocs(dtm_in::SparseMatrixCSC{Int64,Int64},
         next!(prog)
     end
 
-    return btrdocs, topics, docidx_labels
+    btrcrps = DocStructs.BTRCorpus(btrdocs, topics, docidx_labels, D, ntopics, V)
+
+    return btrcrps
 
 end
-create_btrdocs(rawdata::DocStructs.BTRRawData, ntopics::Int64) =
-    create_btrdocs(rawdata.dtm, rawdata.doc_idx, rawdata.y, rawdata.x, ntopics)
+create_btrcrps(rawdata::DocStructs.BTRRawData, ntopics::Int64) =
+    create_btrcrps(rawdata.dtm, rawdata.doc_idx, rawdata.y, rawdata.x, ntopics)
 
 
 """
-Function to extract DocStructs.Topic objects from
+Function to extract DocStructs.Topic objects from Array of DocStructs.BTRParagraphDocument
 """
-function gettopics(btrdocs::Array{DocStructs.BTRParagraphDocument,1},ntopics::Int64)
+function gettopics(btrdocs::Array{DocStructs.BTRParagraphDocument,1})
+    # Get ntopics by looking at length of topicidcount in first document
+    ntopics = length(btrdocs[1].topicidcount)
     all_paras = vcat(map(x -> x.paragraphs, btrdocs)...)
     # Empty array to be filled with Topics
     topics = Array{DocStructs.Topic,1}(undef, ntopics)
