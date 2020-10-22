@@ -37,6 +37,7 @@ Function that creates interaction effects
     Order is Z.*x[1], Z.*x[2], Z.*x[3] etc...
 """
 function create_inter_effects(Z::Array{Float64,2},x::Array{Float64,2},ntopics::Int)
+
     inter_effects::Array{Float64,2} = zeros(size(x,1),ntopics*size(x,2))
     for jj in 1:size(x,2)
         col_range= (jj*ntopics-ntopics+1):(jj*ntopics)
@@ -168,64 +169,78 @@ end
 """
 A Gibbs sampled Bayesian Linear Regression with NIG priors
 BLR_Gibbs(y::Array{Float64,1},x::Array{Float64,2};
-    m_0::Float64 = 0. ,V_0::Float64 = 5.,
+    m_0::Float64 = 0. ,σ_ω::Float64 = 5.,
     a_0::Float64 = 1., b_0::Float64 = 1.,
     iteration::Int64 = 1000, burnin::Int64 = 20)
 Key parameters are:
     y is a vector of the target (dependent) variable
     x is a matrix of the regressor (independent) variables
     m_0 is the mean of the coefficient prior
-    V_0 is the covariance matrix of the coefficient prior
+    σ_ω is the variance of the coefficient prior
     a_0 is the shape parameter of the variance prior
     b_0 is the scale parameter of the variance prior
+    fulldist toggles whether to sample from the joint posterior, or just report the expectations
 """
-function BLR_Gibbs(y::Array{Float64,1},x::Array{Float64,2};
-    m_0::Float64 = 0. ,V_0::Float64 = 5.,
-    a_0::Float64 = 1., b_0::Float64 = 1.,
+
+function BLR_Gibbs(y::Array{Float64,1},regressors::Array{Float64,2};
+    fulldist = true,
+    m_0::Float64 = 0. ,σ_ω::Float64 = 5.,
+    a_0::Float64 = 0., b_0::Float64 = 0.,
     iteration::Int64 = 1000, burnin::Int64 = 20)
 
-    N::Int64 = size(x, 1)
-    J::Int64 = size(x,2)
-    @assert (N == size(y,1)) "Dimensions of y and x must match"
+    # Make sure the data is the right size
+    N = size(regressors, 1)::Int64
+    J = size(regressors,2)::Int64
+    @assert (N == size(y,1)) "Dimensions of target variable and regressors must match"
 
-    # Define m_0_vec and V_0_inv
-    m_0_vec::Array{Float64,1} = m_0.*ones(J)
-    V_0_inv::Array{Float64,2} = inv(Array{Float64,2}(V_0*I(J)))
+    # Convert coefficient priors to right format
+    m_0_vec = m_0.*ones(J)::Array{Float64,1}
+    M_0 = Array{Float64,2}(σ_ω*I(J))::Array{Float64,2}
 
-    β::Array{Float64,2} = zeros(J,iteration+burnin)
-    σ2::Array{Float64,1} = zeros(iteration+burnin)
+    # The elements of the posterior can be calculated in advance
+    M_n = inv(inv(M_0) +transpose(regressors)*regressors)
+    m_n = M_n*(inv(M_0)*m_0_vec + transpose(regressors)*y)
+    a_n = a_0 + N/2
+    b_n = b_0 + 0.5*(transpose(y)*y + transpose(m_0_vec)*inv(M_0)*m_0_vec -
+        transpose(m_n)*inv(M_n)*m_n)
 
-    V_n::Array{Float64,2} = inv(transpose(x)*x .+ V_0_inv)
-    m_n::Array{Float64,1} = V_n*(V_0_inv*m_0_vec + transpose(x)*y)
 
-    # Initialise chain
-    β[:,1] = m_n::Array{Float64,1}
-    σ2[1] = mean((y .- x*m_n).^2)::Float64
-
-    prog = Progress((iteration+burnin - 1), 1)
-    for tt in 2:(iteration+burnin)
-        # Use last iterations σ2
-        σ2_tt = σ2[tt-1]
-
-        # Sample β
-        β_dist = MvNormal(m_n, Matrix(Hermitian(σ2_tt*V_n)))
-        β_tt = rand(β_dist)
-
-        # Sample σ2
-        a_n = a_0 + (N/2) + (J+1)/2
-        b_n = b_0 + 0.5*transpose((y .- x*β_tt))*(y .- x*β_tt) +
-            0.5*transpose((β_tt - m_0_vec))*V_0_inv*(β_tt - m_0_vec)
-        σ2_dist = InverseGamma(a_n, b_n)
-        σ2_tt =  rand(σ2_dist)
-
-        # Store parameter draws
-        β[:,tt] = β_tt
-        σ2[tt] = σ2_tt
-
-        next!(prog)
+    # We can work out the expectation of β and σ2 analytically
+    β = m_n::Array{Float64,1}
+    if a_0 <= 1. || b_0 <= 0.
+        σ2 = mean((y - regressors*m_n).^2)
+    else
+        σ2 = b_n/(a_n - 1)::Float64
     end
 
-    return β[:,(burnin+1):(burnin+iteration)], σ2[(burnin+1):(burnin+iteration)]
+    # Placeholders for sampled β and σ2
+    β_post = repeat(β,1,(iteration+burnin))::Array{Float64,2}
+    σ2_post = repeat([σ2],(iteration+burnin))::Array{Float64,1}
+    ## Sample from the posterior for β and σ2 if option is set to true
+    if fulldist
+        if a_0 <= 1. || b_0 <= 0.
+            β_dist = MvNormal(β, Matrix(Hermitian(σ2*M_n)))
+            β_post = rand(β_dist, iteration+burnin)
+        else
+            # Marginal distribution of σ2 doesn't depend on β, so we can draw all in one go
+            σ2_dist = InverseGamma(a_n, b_n)
+            σ2_post = rand(σ2_dist,(iteration + burnin))
+            prog = Progress((iteration+burnin - 1), 1)
+            for it in 2:(iteration+burnin)
+                # Use last iterations σ2
+                σ2_it = σ2_post[it-1]
+                # Sample β
+                β_dist = MvNormal(m_n, Matrix(Hermitian(σ2_it*M_n)))
+                β_post[:,it] = rand(β_dist)
+                next!(prog)
+            end
+        end
+        β_post = β_post[:,(burnin+1):(burnin+iteration)]
+        σ2_post = σ2_post[(burnin+1):(burnin+iteration)]
+    end
+
+
+    return β, σ2, β_post, σ2_post
 
 end
 
