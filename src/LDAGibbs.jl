@@ -8,7 +8,7 @@ Perform [Latent Dirichlet allocation](https://en.wikipedia.org/wiki/Latent_Diric
 - `β`: `ntopics × nwords` Sparse matrix of probabilities s.t. `sum(β, 1) == 1`
 - `θ`: `ntopics × ndocs` Dense matrix of probabilities s.t. `sum(θ, 1) == 1`
 """
-function LDA_Gibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int64;
+function LDAGibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int64;
     iteration::Int64 = 1000, α::Float64 = 1., η::Float64 = 1., burnin = 100)
 
     # Initialise variables

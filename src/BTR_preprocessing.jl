@@ -47,7 +47,7 @@ function btr_traintestsplit(dtm_in::SparseMatrixCSC{Int64,Int64},
     end
     # Separate indices into test and training
     train_obs::Array{Int64,1} = Array{Int64,1}(view(idx, 1:floor(Int, train_split*N)))
-    test_obs::Array{Int64,1} = setdiff(idx, train_idx)
+    test_obs::Array{Int64,1} = setdiff(idx, train_obs)
     # Identify the doc_idx of the documents assigned to each set
     train_docs::BitArray{1} = in.(doc_idx, [train_obs])
     test_docs::BitArray{1} = in.(doc_idx, [test_obs])

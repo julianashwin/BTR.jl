@@ -77,12 +77,12 @@ function BTREstep(btrmodel::BTRModel)
                     normalize_probs::Float64 = sum(zprobs)
 
                     # select new topic
-                    select::Float64 = rand() # Draw from unit uniform (faster than Multinomial function from Distributions.jl)
+                    selectz::Float64 = rand() # Draw from unit uniform (faster than Multinomial function from Distributions.jl)
                     sum_of_prob::Float64 = 0.0
                     new_topicid::Int64 = 0
                     for (selected_topicid, prob) in enumerate(zprobs)
                         sum_of_prob += prob / normalize_probs # Add normalised probability to sum
-                        if select < sum_of_prob
+                        if selectz < sum_of_prob
                             new_topicid = selected_topicid # Select topic if sum greater than draw
                             break
                         end

@@ -27,7 +27,7 @@ function BTRMstep(btrmodel::BTRModel)
 
     # repopulate btrmodel with updated parameters
     btrmodel.ω = ω
-    btrmodel.σ2 = btrmodel.σ2
+    btrmodel.σ2 = σ2
     btrmodel.ω_post = ω_post
     btrmodel.σ2_post = σ2_post
 

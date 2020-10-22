@@ -2,7 +2,7 @@
 BTR_EMGibbs plus interaction effects between x variables and topics in the regression
     order is (all topics)*x_1 + (all_topics)*x_2 etc...
 """
-function BTR_Gibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
+function BTRfullGibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
     y::Array{Float64,1};  x::Array{Float64,2} = zeros(1,1),
     σ2::Float64 = 0.,
     α::Float64 =1., η::Float64 = 1., σ_ω::Float64 = 1., μ_ω::Float64 = 0.,
