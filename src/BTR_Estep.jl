@@ -1,7 +1,7 @@
 """
 Function that performs the E-step, of sampling topic assignments, on a BTRModel object
 """
-function BTREstep(btrmodel::BTRModel)
+function BTREstep(btrmodel::BTRModel)::BTRModel
     ## Extract the important parts of btrmodel
     docs::Array{DocStructs.BTRParagraphDocument,1} = btrmodel.crps.docs
     topics::Array{DocStructs.Topic,1} = btrmodel.crps.topics

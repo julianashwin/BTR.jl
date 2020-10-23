@@ -3,20 +3,20 @@ Out-of-sample prediction for BTR
     Takes an (unseen) BTRCorpus and a BTRModel as arguments
     Outputs a BTRPrediction object
 """
-function BTRpredict(btrcrps::DocStructs.BTRCorpus, btrmodel::BTRModel)::BTRPrediction
+function BTRfullGibbspredict(btrcrps::DocStructs.BTRCorpus, btrmodel::BTRModel)::BTRPrediction
 
     # Extract the estimation options
-    opts::BTROptions = btrmodel.options
-    ntopics::Int64 = opts.ntopics
-    E_iters::Int64 = opts.E_iters
-    burnin::Int64 = opts.burnin
-    interactions::Array{Int64,1} = opts.interactions
-    nointeractions::Array{Int64,1} = setdiff(opts.xregs, opts.interactions)
+    opts = btrmodel.options::BTROptions
+    ntopics = opts.ntopics::Int64
+    E_iters = opts.E_iters::Int64
+    burnin = opts.burnin::Int64
+    interactions = opts.interactions::Array{Int64,1}
+    nointeractions = setdiff(opts.xregs, opts.interactions)::Array{Int64,1}
 
     # Extract the estimated parameters and priors
-    α::Float64 = opts.α
-    β::Array{Float64,2} = btrmodel.β
-    ω::Array{Float64,1} = btrmodel.ω
+    α = opts.α::Float64
+    β = btrmodel.β::Array{Float64,2}
+    ω = btrmodel.ω::Array{Float64,1}
 
     # Check that everything matches up
     @assert (size(β,1) == ntopics) "β needs to match with ntopics"
@@ -29,13 +29,12 @@ function BTRpredict(btrcrps::DocStructs.BTRCorpus, btrmodel::BTRModel)::BTRPredi
 
 
     # Extract the data
-    docs::Array{DocStructs.BTRParagraphDocument,1} = btrcrps.docs
+    docs = btrcrps.docs
 
     # Some placeholders
-    zprobs::Array{Float64,1} = Vector{Float64}(undef, ntopics)
-    topic_counts::Array{Array{Int64,1},1} = Array{Array{Int64,1},1}(undef,length(docs))
-    Z_bar::Array{Float64,2} = zeros(ntopics,length(docs))
-    Z_bar_avg::Array{Float64,2} = zeros(ntopics,length(docs))
+    zprobs = Vector{Float64}(undef, ntopics)::Array{Float64,1}
+    Z_bar = zeros(ntopics,length(docs))::Array{Float64,2}
+    Z_bar_avg = zeros(ntopics,length(docs))::Array{Float64,2}
 
     display("Sampling topic assignments")
     prog = Progress(E_iters+burnin, 1)
@@ -47,20 +46,20 @@ function BTRpredict(btrcrps::DocStructs.BTRCorpus, btrmodel::BTRModel)::BTRPredi
                 # Remove paragraph counts from document counts
                 doc.topicidcount -= para.topicidcount
                 for (nn, word) in enumerate(para.text)
-                    β_word::Array{Float64,1} = β[:,word]
-                    topicid_current::Int64 = para.topic[nn] # Current id of this word
+                    β_word = β[:,word]::Array{Float64,1}
+                    topicid_current = para.topic[nn]::Int64 # Current id of this word
                     para.topicidcount[topicid_current] -= 1 # Remove this word from doc topic counts
 
                     for kk in 1:ntopics
-                        term1::Float64  = (para.topicidcount[kk] + α) # prob of topic based on rest of doc
+                        term1 = (para.topicidcount[kk] + α)::Float64  # prob of topic based on rest of doc
                         zprobs[kk] = β_word[kk]* (doc.topicidcount[kk] + α)
                     end
-                    normalize_probs::Float64 = sum(zprobs)
+                    normalize_probs = sum(zprobs)::Float64
 
                     # select new topic
-                    selectz::Float64 = rand() # Draw from unit uniform (faster than Multinomial function from Distributions.jl)
-                    sum_of_prob::Float64 = 0.0
-                    new_topicid::Int64 = 0
+                    selectz = rand()::Float64 # Draw from unit uniform (faster than Multinomial function from Distributions.jl)
+                    sum_of_prob = 0.0::Float64
+                    new_topicid = 0::Int64
                     for (selected_topicid, prob) in enumerate(zprobs)
                         sum_of_prob += prob / normalize_probs # Add normalised probability to sum
                         if selectz < sum_of_prob
@@ -96,22 +95,21 @@ function BTRpredict(btrcrps::DocStructs.BTRCorpus, btrmodel::BTRModel)::BTRPredi
     end # End of Gibbs sampled iterations
 
     # Create regressors for prediction
-    x::Array{Float64,2} = vcat(getfield.(btrcrps.docs, :x)...)
-    Z_bar = Matrix(transpose(Z_bar_avg))
+    x = vcat(getfield.(btrcrps.docs, :x)...)::Array{Float64,2}
+    Z_bar = Matrix(transpose(Z_bar_avg))::Array{Float64,2}
     # Placeholders to store the document-topic and topic-word distributions
-    inter_effects::Array{Float64,2} = zeros(btrcrps.N,(ntopics*length(interactions)))
+    inter_effects = zeros(btrcrps.N,(ntopics*length(interactions)))::Array{Float64,2}
     for jj in 1:length(interactions)
         col_range::UnitRange{Int64} = ((jj*ntopics-ntopics+1):(jj*ntopics))
         inter_effects[:,col_range] = Z_bar.*vec(x[:,interactions[jj]])
     end
-    regressors::Array{Float64,2} = hcat(Z_bar, inter_effects, x[:,nointeractions])
+    regressors = hcat(Z_bar, inter_effects, x[:,nointeractions])::Array{Float64,2}
     @assert size(regressors) == (btrcrps.N, length(ω)) "Regressors and ω don't match"
 
     # Renormalise θ and β to eliminate any numerical errors
-    y_pred::Array{Float64,1} = regressors*ω
+    y_pred = regressors*ω::Array{Float64,1}
 
-    predictions = BTRPrediction(options = opts, crps = btrcrps, Z_bar = Z_bar, y_pred = y_pred,
-        regressors = regressors)
+    predictions = BTRPrediction(options = opts, crps = btrcrps, Z_bar = Z_bar, y_pred = y_pred)
     return predictions
 
 end

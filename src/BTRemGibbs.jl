@@ -2,7 +2,7 @@
 BTR_EMGibbs plus interaction effects between x variables and topics in the regression
     order is (all topics)*x_1 + (all_topics)*x_2 etc...
 """
-function BTR_EMGibbs(btrmodel::BTRModel)
+function BTRemGibbs(btrmodel::BTRModel)
 
     opts = btrmodel.options
 
@@ -17,11 +17,11 @@ function BTR_EMGibbs(btrmodel::BTRModel)
     for em in 1:opts.EM_iters
         ω_iters = btrmodel.ω_iters::Array{Float64,2}
         display(join(["E step ", em]))
-        @time btrmodel = BTREstep(btrmodel)
+        btrmodel = BTREstep(btrmodel)
         heatmap(btrmodel.β)
 
         display(join(["M step ", em]))
-        @time btrmodel = BTRMstep(btrmodel)
+        btrmodel = BTRMstep(btrmodel)
         display(join(["EM iteration ", em, " complete, MSE: ", btrmodel.σ2]))
 
         # Find coefficient updates

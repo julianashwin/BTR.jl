@@ -86,6 +86,8 @@ Structures for the actual estimation
     E_iters::Int64 = 100;
     M_iters::Int64 = 250;
     EM_iters::Int64 = 10;
+    fullGibbs_iters::Int64 = 10000;
+    fullGibbs_thinning::Int64 = 10;
     burnin::Int64 = 10;
     ω_tol::Float64 = 0.01;
     rel_tol::Bool = false;
@@ -112,6 +114,7 @@ end
     ω::Array{Float64,1} = options.μ_ω.*ones(options.ntopics+length(options.interactions)*options.ntopics
      + (length(options.xregs) - length(options.interactions)));
     σ2::Float64 = 1.0;
+    regressors::Array{Float64,2} = zeros(crps.N,length(ω));
     ω_post::Array{Float64,2} = options.μ_ω.+ sqrt(options.σ_ω)*randn(length(ω),options.E_iters);
     σ2_post::Array{Float64,1} = zeros(options.E_iters);
     ω_iters::Array{Float64,2} = zeros(length(ω), options.EM_iters+1);
@@ -122,6 +125,8 @@ end
     options::BTROptions = BTROptions();
     crps::DocStructs.BTRCorpus = DocStructs.BTRCorpus();
     Z_bar::Array{Float64,2} = zeros(options.ntopics,crps.N);
+    regressors::Array{Float64,2} = zeros(crps.N,(options.ntopics +
+        options.ntopics*length(options.interactions) + length(options.xregs) - length(options.interactions)));
     y_pred::Array{Float64,1} = zeros(crps.N);
 end
 

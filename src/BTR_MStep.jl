@@ -1,7 +1,7 @@
 """
 Function that performs the M-step, of estimating ω and σ2, on a BTRModel object
 """
-function BTRMstep(btrmodel::BTRModel)
+function BTRMstep(btrmodel::BTRModel)::BTRModel
     ## Extract options
     opts::BTROptions = btrmodel.options
     ntopics::Int64 = opts.ntopics
@@ -30,6 +30,7 @@ function BTRMstep(btrmodel::BTRModel)
     btrmodel.σ2 = σ2
     btrmodel.ω_post = ω_post
     btrmodel.σ2_post = σ2_post
+    btrmodel.regressors = regressors
 
     return btrmodel
 end
