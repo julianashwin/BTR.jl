@@ -40,7 +40,7 @@ function BTREstep(btrmodel::BTRModel)::BTRModel
             y_dd = doc.y
 
             # Predicted y without the document (i.e. just x)
-            ypred_minusd = sum(ω_x.*doc.x[:,nointeractions])
+            ypred_minusd = dot(doc.x[:,nointeractions],ω_x)
 
             ## The document specific ω, based on the interaction effects
             ω_docspec = zeros(ntopics)::Array{Float64,1}
