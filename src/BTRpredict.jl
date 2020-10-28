@@ -96,6 +96,7 @@ function BTRpredict(btrcrps::DocStructs.BTRCorpus, btrmodel::BTRModel)::BTRPredi
     end # End of Gibbs sampled iterations
 
     # Create regressors for prediction
+    y::Array{Float64,1} = vcat(getfield.(btrcrps.docs, :y)...)
     x::Array{Float64,2} = vcat(getfield.(btrcrps.docs, :x)...)
     Z_bar = Matrix(transpose(Z_bar_avg))
     # Placeholders to store the document-topic and topic-word distributions
@@ -111,7 +112,7 @@ function BTRpredict(btrcrps::DocStructs.BTRCorpus, btrmodel::BTRModel)::BTRPredi
     y_pred::Array{Float64,1} = regressors*ω
 
     predictions = BTRPrediction(options = opts, crps = btrcrps, Z_bar = Z_bar, y_pred = y_pred,
-        regressors = regressors)
+        regressors = regressors, y = y)
     return predictions
 
 end

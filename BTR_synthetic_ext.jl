@@ -25,7 +25,7 @@ pkg> dev https://github.com/julianashwin/BTR.jl
 using Revise # V useful in development as don't have to reload julia after redefining a struct etc
 #using BTR
 include("src/BTR_dev.jl")
-using TextAnalysis, DataFrames, CSV
+using TextAnalysis, DataFrames, CSV, Plots
 using StatsPlots, StatsBase, Plots.PlotMeasures, Distributions, Random
 
 
@@ -81,7 +81,8 @@ docs_all = repeat([""], NP)
 docs_all[1:DP] = docs
 
 ## Generate document indicator for each document
-doc_idx = repeat(1:N,inner=Pd)
+docidx_dtm = repeat(1:N,inner=Pd)
+docidx_vars = Array{Int64,1}(1:N)
 
 ## Generate topic assignment regressors
 Z_bar_true = Float64.(topic_counts)
@@ -95,7 +96,7 @@ Z_bar_all[1:DP,:] = Z_bar_true
 x1 = zeros(N,1)
 x2 = randn(N,1)
 #x2 = reshape(repeat(x2, inner = Pd),(NP,1))
-x1[1:D] = group_mean(hcat(Array(Float64.(word_counts[:,1]))), doc_idx)
+x1[1:D] = group_mean(hcat(Array(Float64.(word_counts[:,1]))), docidx_dtm)
 x1 = (x1.-mean(x1))./std(x1)
 #x1 = reshape(repeat(vec(group_mean(x1, doc_idx)), inner = Pd),(NP,1))
 x = Array{Float64,2}(hcat(x1,x2))
@@ -109,12 +110,9 @@ x = Array{Float64,2}(hcat(x1,x2))
 #end
 
 ## Aggregate interactions to paragraph level
-# Identify size and first member of each group
-Nps = counts(doc_idx)
-first_paras = findfirst_group(doc_idx)
 # Aggregate inter_effects and Z_bar (straight mean is fine as long as all docs have same number of paras)
 #inter_effects = reshape(vec(group_mean(inter_effects, doc_idx)),(N,K))
-Z_bar_all =reshape(vec(group_mean(Z_bar_all, doc_idx)),(N,K))
+Z_bar_all =reshape(vec(group_mean(Z_bar_all, docidx_dtm)),(N,K))
 
 
 ## Generate outcome variable
@@ -169,7 +167,7 @@ Generate word count variable from DTM
 list1 = ["1","test"]
 
 list1_counts = hcat(Float64.(wordlistcounts(dtm_sparse.dtm,vocab,list1)))
-list1_counts = group_mean(list1_counts, doc_idx)
+list1_counts = group_mean(list1_counts, docidx_dtm)
 list1_score = (list1_counts.-mean(list1_counts))./std(list1_counts)
 #list1_score = group_mean(list1_score,doc_idx)
 @assert list1_score == x1
@@ -181,14 +179,14 @@ list1_score = (list1_counts.-mean(list1_counts))./std(list1_counts)
 Split into training and test sets (by doc_idx) and convert to BTRRawData structure
 """
 dtm_in = dtm_sparse.dtm
-train_data, test_data = btr_traintestsplit(dtm_in, doc_idx, y, x = x,
+train_data, test_data = btr_traintestsplit(dtm_in, docidx_dtm, docidx_vars, y, x = x,
     train_split = 0.75, shuffle_obs = true)
 # Alternatively, can convert the entier set to BTRRawData with
-all_data = DocStructs.BTRRawData(dtm_in, doc_idx, y, x)
+all_data = DocStructs.BTRRawData(dtm_in, docidx_dtm, docidx_vars, y, x)
 ## Visualise the training-test split
-histogram(train_data.doc_idx, bins = 1:N, label = "training set",
+histogram(train_data.docidx_dtm, bins = 1:N, label = "training set",
     xlab = "Observation", ylab= "Paragraphs", c=1, lc=1)
-display(histogram!(test_data.doc_idx, bins = 1:N, label = "test set", c=2, lc=2))
+display(histogram!(test_data.docidx_dtm, bins = 1:N, label = "test set", c=2, lc=2))
 if save_files; savefig("figures/synth_trainsplit.pdf"); end;
 
 
@@ -238,7 +236,7 @@ if save_files; savefig("figures/synthetic_IGprior.pdf"); end;
 btropts.E_iters = 500 # E-step iterations (sampling topic assignments, z)
 btropts.M_iters = 2500 # M-step iterations (sampling regression coefficients residual variance)
 btropts.EM_iters = 100 # Maximum possible EM iterations (will stop here if no convergence)
-btropts.CVEM = :obs # Split for separate E and M step batches (if batch = true)
+btropts.CVEM = :none # Split for separate E and M step batches (if batch = true)
 btropts.CVEM_split = 0.5 # Split for separate E and M step batches (if batch = true)
 btropts.burnin = 10 # Burnin for Gibbs samplers
 btropts.ω_tol = 0.005 # Convergence tolerance for regression coefficients ω
@@ -303,7 +301,7 @@ if save_files; savefig("figures/synth_BTR.pdf"); end;
 ## Out of sample prediction in test set
 btr_predicts = BTRpredict(btrcrps_ts, btrmodel)
 #btr_predicts.crps.topics = gettopics(btrcrps_ts.docs)
-mse_btr = mean((test_data.y .- btr_predicts.y_pred).^2)
+mse_btr = mean((btr_predicts.y .- btr_predicts.y_pred).^2)
 
 
 
@@ -322,18 +320,16 @@ ldamodel = BTRModel(crps = btrcrps_tr, options = ldaopts, vocab = vocab)
 ## Estimate LDA model on full training set
 ldamodel  = LDAGibbs(ldamodel)
 
-## Create regressors with an without fixed effects and interaction effects
-lda_regressors = ldamodel.regressors
-
 ## Bayesian linear regression on training set
-# No interactions
-blr_ω, blr_σ2, blr_ω_post, blr_σ2_post = BLR_Gibbs(train_data.y, lda_regressors,
+blr_ω, blr_σ2, blr_ω_post, blr_σ2_post = BLR_Gibbs(ldamodel.y, ldamodel.regressors,
     m_0 = ldaopts.μ_ω, σ_ω = ldaopts.σ_ω, a_0 = ldaopts.a_0, b_0 = ldaopts.b_0)
+ldamodel.ω = blr_ω
+ldamodel.ω_post = blr_ω_post
 
 ## Plot results
 topic_order = synth_reorder_topics(ldamodel.β)
 # Without interactions
-plt = synth_data_plot(ldamodel.β, blr_ω_post, true_ω = ω_z_true,
+plt = synth_data_plot(ldamodel.β, ldamodel.ω_post, true_ω = ω_z_true,
     topic_ord = topic_order, plt_title = "",
     left_mar = 3,top_mar = 0, bottom_mar = 0, ticksize = 10, labelsize = 25)
 plot!(size = (300,300))
@@ -342,14 +338,10 @@ if save_files; savefig("figures/synth_LDA_LR.pdf"); end;
 
 
 ## Out of sample prediction
-# First, we can just update the coefficents in ldamodel using those estimated above
-ldamodel.ω = blr_ω
 lda_predicts = BTRpredict(btrcrps_ts, ldamodel)
 
-
 ## Calculate MSE
-mse_lda_blr = mean((test_data.y .- lda_predicts.regressors*blr_ω).^2)
-
+mse_lda_blr = mean((lda_predicts.y .- lda_predicts.y_pred).^2)
 
 
 
@@ -397,7 +389,7 @@ end
 
 slda1_predicts = BTRpredict(btrcrps_ts_slda, slda1model)
 
-mse_blr_slda = mean((test_data.y .- (slda1_predicts.y_pred .+ y_stage1_test)).^2)
+mse_blr_slda = mean((slda1_predicts.y .-slda1_predicts.y_pred).^2)
 
 
 """

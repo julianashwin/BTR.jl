@@ -12,15 +12,16 @@ using SparseArrays
 # Structure including all the raw data to estimate BTR
 mutable struct BTRRawData
     dtm::SparseMatrixCSC{Int64,Int64}
-    doc_idx::Array{Int64,1}
+    docidx_dtm::Array{Int64,1}
+    docidx_vars::Array{Int64,1}
     y::Array{Float64,1}
     x::Array{Float64,2}
     N::Int64
     V::Int64
 end
-BTRRawData(dtm, doc_idx, y, x::Array{Float64,2}) = BTRRawData(dtm, doc_idx, y, x, length(y), size(dtm,2))
-BTRRawData(dtm, doc_idx, y, x, N::Int64) = BTRRawData(dtm, doc_idx, y, x, N, size(dtm,2))
-BTRRawData(dtm, doc_idx, y, N::Int64) = BTRRawData(dtm, doc_idx, y, zeros(1,1), N, size(dtm,2))
+BTRRawData(dtm, docidx_dtm, docidx_vars, y, x::Array{Float64,2}) = BTRRawData(dtm, docidx_dtm, docidx_vars, y, x, length(y), size(dtm,2))
+BTRRawData(dtm, docidx_dtm, docidx_vars, y, x, N::Int64) = BTRRawData(dtm, docidx_dtm, docidx_vars, y, x, N, size(dtm,2))
+BTRRawData(dtm, docidx_dtm, docidx_vars, y, N::Int64) = BTRRawData(dtm, docidx_dtm, docidx_vars, y, zeros(1,1), N, size(dtm,2))
 
 # Structure to keep track of assignments at the paragraph level
 mutable struct TopicBasedDocument
@@ -38,12 +39,8 @@ mutable struct BTRParagraphDocument
     x::Array{Float64,2}
     idx::Int64
 end
-BTRParagraphDocument(ntopics, y, x) = BTRParagraphDocument(Vector{TopicBasedDocument}(),
-    zeros(Int, ntopics), y, x, 0)
-BTRParagraphDocument(ntopics, y, x, P, docidx) = BTRParagraphDocument(Vector{TopicBasedDocument}(undef,P),
-    zeros(Int, ntopics), y, x, 0)
-BTRParagraphDocument(ntopics, y, x, P, docidx) = BTRParagraphDocument(Vector{TopicBasedDocument}(undef,P),
-    zeros(Int, ntopics), y, x, docidx)
+BTRParagraphDocument(ntopics::Int64, y::Float64, x::Array{Float64,2}, P::Int64, docidx::Int64) = BTRParagraphDocument(
+    Vector{TopicBasedDocument}(undef,P), zeros(Int, ntopics), y, x, docidx)
 
 # Structure to keep track of assignments at the corpus level
 mutable struct Topic
@@ -115,6 +112,7 @@ end
      + (length(options.xregs) - length(options.interactions)));
     σ2::Float64 = 1.0;
     regressors::Array{Float64,2} = zeros(crps.N,length(ω));
+    y::Array{Float64,1} = vcat(getfield.(crps.docs, :y)...);
     ω_post::Array{Float64,2} = options.μ_ω.+ sqrt(options.σ_ω)*randn(length(ω),options.E_iters);
     σ2_post::Array{Float64,1} = zeros(options.E_iters);
     ω_iters::Array{Float64,2} = zeros(length(ω), options.EM_iters+1);
@@ -128,6 +126,7 @@ end
     regressors::Array{Float64,2} = zeros(crps.N,(options.ntopics +
         options.ntopics*length(options.interactions) + length(options.xregs) - length(options.interactions)));
     y_pred::Array{Float64,1} = zeros(crps.N);
+    y::Array{Float64,1} = vcat(getfield.(crps.docs, :y)...);
 end
 
 #BTRModel(btrcrps::DocStructs.BTRCorpus) = BTRModel(docs = btrcrps.docs,

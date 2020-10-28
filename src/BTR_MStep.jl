@@ -31,6 +31,7 @@ function BTRMstep(btrmodel::BTRModel)::BTRModel
     btrmodel.ω_post = ω_post
     btrmodel.σ2_post = σ2_post
     btrmodel.regressors = regressors
+    btrmodel.y = y
 
     return btrmodel
 end

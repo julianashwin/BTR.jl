@@ -34,12 +34,12 @@ end
 """
 Function to split data into test and training sets
 """
-function btr_traintestsplit(dtm_in::SparseMatrixCSC{Int64,Int64},
-        doc_idx::Array{Int64,1}, y::Array{Float64,1};
+function btr_traintestsplit(dtm_in::SparseMatrixCSC{Int64,Int64}, docidx_dtm::Array{Int64,1},
+        docidx_vars::Array{Int64,1}, y::Array{Float64,1};
         x::Array{Float64,2} = zeros(1,1),
         train_split::Float64 = 0.75, shuffle_obs::Bool = true)
     # Extract total number of documents/observations
-    N::Int64 = length(unique(doc_idx))
+    N::Int64 = length(unique(vcat(docidx_dtm, docidx_vars)))
     # Shuffle the *document* ids (or don't if shuffle=false and we want to split by original order)
     idx::Array{Int64,1} = 1:N
     if shuffle_obs
@@ -49,26 +49,28 @@ function btr_traintestsplit(dtm_in::SparseMatrixCSC{Int64,Int64},
     train_obs::Array{Int64,1} = Array{Int64,1}(view(idx, 1:floor(Int, train_split*N)))
     test_obs::Array{Int64,1} = setdiff(idx, train_obs)
     # Identify the doc_idx of the documents assigned to each set
-    train_docs::BitArray{1} = in.(doc_idx, [train_obs])
-    test_docs::BitArray{1} = in.(doc_idx, [test_obs])
+    train_docs::BitArray{1} = in.(docidx_dtm, [train_obs])
+    test_docs::BitArray{1} = in.(docidx_dtm, [test_obs])
     # Identify the indices that will be assigned to train and test
-    train_idx::BitArray{1} = in.(Array(1:N),[train_obs])
-    test_idx::BitArray{1} = in.(Array(1:N),[test_obs])
+    train_vars::BitArray{1} = in.(docidx_vars,[train_obs])
+    test_vars::BitArray{1} = in.(docidx_vars,[test_obs])
     # Split the document indices into training and test sets
-    doc_idx_train::Array{Int64,1} = doc_idx[train_docs]
-    doc_idx_test::Array{Int64,1} = doc_idx[test_docs]
+    docidx_dtm_train::Array{Int64,1} = docidx_dtm[train_docs]
+    docidx_dtm_test::Array{Int64,1} = docidx_dtm[test_docs]
+    docidx_vars_train::Array{Int64,1} = docidx_vars[train_vars]
+    docidx_vars_test::Array{Int64,1} = docidx_vars[test_vars]
     # Split the DTM into training and test
     dtm_train::SparseMatrixCSC{Int64,Int64} = dtm_sparse.dtm[train_docs,:]
     dtm_test::SparseMatrixCSC{Int64,Int64} = dtm_sparse.dtm[test_docs,:]
     # Split y (and x) into training and test
-    y_train::Array{Float64,1} = y[train_idx]
-    y_test::Array{Float64,1} = y[test_idx]
+    y_train::Array{Float64,1} = y[train_vars]
+    y_test::Array{Float64,1} = y[test_vars]
     x_train::Array{Float64,2} = zeros(1,1)
     x_test::Array{Float64,2} = zeros(1,1)
     if size(x,1) == length(y)
         display("x variables defined at whole document level")
-        x_train = x[train_idx,:]
-        x_test = x[test_idx,:]
+        x_train = x[train_vars,:]
+        x_test = x[test_vars,:]
     elseif size(x,1) == size(dtm_in,1)
         display("x variables defined at the paragraph level")
         x_train = x[train_docs,:]
@@ -77,8 +79,8 @@ function btr_traintestsplit(dtm_in::SparseMatrixCSC{Int64,Int64},
         display("No x variables provided")
     end
 
-    train_data = DocStructs.BTRRawData(dtm_train, doc_idx_train, y_train, x_train)
-    test_data = DocStructs.BTRRawData(dtm_test, doc_idx_test, y_test, x_test)
+    train_data = DocStructs.BTRRawData(dtm_train, docidx_dtm_train, docidx_vars_train, y_train, x_train)
+    test_data = DocStructs.BTRRawData(dtm_test, docidx_dtm_test, docidx_vars_test, y_test, x_test)
     return train_data, test_data
 
 end
@@ -88,13 +90,15 @@ end
 """
 Function that converts raw data into BTRdocs format
 """
-function create_btrcrps(dtm_in::SparseMatrixCSC{Int64,Int64},
-        doc_idx::Array{Int64,1}, y::Array{Float64,1}, x::Array{Float64,2},
+function create_btrcrps(dtm_in::SparseMatrixCSC{Int64,Int64}, docidx_dtm::Array{Int64,1},
+        docidx_vars::Array{Int64,1}, y::Array{Float64,1}, x::Array{Float64,2},
         ntopics::Int64)
     # Need doc_idx labels to be divorced from the indices themselves to fill the array
-    docidx_labels = unique(doc_idx)
+    docidx_labels::Array{Int64,1} = unique(vcat(docidx_dtm, docidx_vars))
     D::Int64 = length(unique(docidx_labels))
     V::Int64 = size(dtm_in,2)
+
+
     """
     First, create the topic object that will keep track of assignments at the corpus level
     """
@@ -114,10 +118,10 @@ function create_btrcrps(dtm_in::SparseMatrixCSC{Int64,Int64},
     prog = Progress(D, 1)
     for dd in 1:D
         idx = docidx_labels[dd]
-        dtm_paras = SparseMatrixCSC{Int64,Int64}(dtm_in[(doc_idx .== idx),:])
+        dtm_paras = SparseMatrixCSC{Int64,Int64}(dtm_in[(docidx_dtm .== idx),:])
         P_dd = size(dtm_paras,1)
-        x_dd = hcat(x[[dd],:])
-        y_dd = y[dd]
+        x_dd = hcat(x[(docidx_vars .== idx),:])
+        y_dd = y[(docidx_vars .== idx)][1]
         btr_document = DocStructs.BTRParagraphDocument(ntopics, y_dd, x_dd, P_dd, idx)
         topic_base_paras = Array{DocStructs.TopicBasedDocument,1}(undef, P_dd)
         for pp in 1:P_dd
@@ -147,7 +151,7 @@ function create_btrcrps(dtm_in::SparseMatrixCSC{Int64,Int64},
 
 end
 create_btrcrps(rawdata::DocStructs.BTRRawData, ntopics::Int64) =
-    create_btrcrps(rawdata.dtm, rawdata.doc_idx, rawdata.y, rawdata.x, ntopics)
+    create_btrcrps(rawdata.dtm, rawdata.docidx_dtm, rawdata.docidx_vars, rawdata.y, rawdata.x, ntopics)
 
 
 """
@@ -176,6 +180,33 @@ function gettopics(btrdocs::Array{DocStructs.BTRParagraphDocument,1})
     return topics
 end
 
+
+"""
+Convert row of a DTM to a string
+"""
+function dtmrowtotext(dtm_row::SparseVector{Int64,Int64}, vocab::Array{String,1})::String
+
+    rels::SparseVector{Bool,Int64} = dtm_row .> 0
+    row_rels::Array{Int64,1} = Array{Int64,1}(dtm_row[rels])
+    vocab_rels::Array{String,1} = vocab[rels]
+    text_out::String = join(repeat.(vocab_rels, row_rels))
+    return text_out
+end
+
+
+"""
+Convert DTM into an array of strings
+"""
+function dtmtotext(dtm_in::SparseMatrixCSC{Int64,Int64}, vocab::Array{String,1})::Array{String,1}
+    vocab_new::Array{String,1} = vocab.*=" "
+
+    text::Array{String,1} = Array{String,1}(undef,size(dtm_in,1))
+    for ii in 1:size(dtm_in,1)
+        text[ii] = dtmrowtotext(dtm_in[ii,:], vocab_new)
+    end
+
+    return text
+end
 
 
 """
