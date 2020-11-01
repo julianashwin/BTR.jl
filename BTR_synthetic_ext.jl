@@ -45,10 +45,10 @@ Generate some synthetic data
 ## Size of sample and number of topics
 K = 3 # number of topics
 V = 9 # length of vocabulary (number of unique words)
-D = 1000 # number of documents
+D = 5000 # number of documents
 Pd = 4 # number of paragraphs
 Np = 25 # number of words per document
-N = D # total observations (N>=D)
+N = D+10 # total observations (N>=D)
 NP = N*Pd # total number of paragraphs
 DP = D*Pd # total number of non-empty paragraphs
 
@@ -96,7 +96,7 @@ Z_bar_all[1:DP,:] = Z_bar_true
 x1 = zeros(N,1)
 x2 = randn(N,1)
 #x2 = reshape(repeat(x2, inner = Pd),(NP,1))
-x1[1:D] = group_mean(hcat(Array(Float64.(word_counts[:,1]))), docidx_dtm)
+x1[1:D] = group_mean(hcat(Array(Float64.(word_counts[:,1]))), docidx_dtm[1:DP])
 x1 = (x1.-mean(x1))./std(x1)
 #x1 = reshape(repeat(vec(group_mean(x1, doc_idx)), inner = Pd),(NP,1))
 x = Array{Float64,2}(hcat(x1,x2))
@@ -128,17 +128,17 @@ Test whether synthetic data gives correct coefficients in OLS regression with tr
 regressors = hcat(Z_bar_all[1:D,:], x[1:D,:])
 ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y[1:D])
 #display(ols_coeffs)
-mse_true = mean((y .- regressors*ols_coeffs).^2)
+mse_true = mean((y[1:D] .- regressors*ols_coeffs).^2)
 
 regressors = hcat(Z_bar_all[1:D,:])
 ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y[1:D])
 #display(ols_coeffs)
-mse_nox = mean((y .- regressors*ols_coeffs).^2)
+mse_nox = mean((y[1:D] .- regressors*ols_coeffs).^2)
 
-regressors = hcat(ones(D),x)
+regressors = hcat(ones(D),x[1:D,:])
 ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y[1:D])
 #display(ols_coeffs)
-mse_noz = mean((y .- regressors*ols_coeffs).^2)
+mse_noz = mean((y[1:D] .- regressors*ols_coeffs).^2)
 
 
 ## All observations
@@ -283,12 +283,14 @@ Estimate BTR
 """
 ## Include x regressors by changing the options
 btropts.xregs = [1,2]
-btropts.interactions = []
+btropts.interactions = [2]
 
 ## Initialise BTRModel object
 btrmodel = BTRModel(crps = btrcrps_tr, options = btropts, vocab = vocab)
 
 ## Estimate BTR with EM-Gibbs algorithm
+btropts.CVEM = :none
+btropts.CVEM_split = 0.5
 btrmodel = BTRemGibbs(btrmodel)
 
 ## Plot results
