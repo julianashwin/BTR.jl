@@ -2,18 +2,18 @@
 BTR_EMGibbs plus interaction effects between x variables and topics in the regression
     order is (all topics)*x_1 + (all_topics)*x_2 etc...
 """
-function BTR_EMGibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
+function BTRfullGibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
     y::Array{Float64,1};  x::Array{Float64,2} = zeros(1,1),
     σ2::Float64 = 0.,
     α::Float64 =1., η::Float64 = 1., σ_ω::Float64 = 1., μ_ω::Float64 = 0.,
     a_0::Float64 = 0., b_0::Float64  = 0.,
     E_iteration::Int = 100, M_iteration::Int = 500, EM_iteration::Int = 10,
-    burnin::Int = 10,
     topics_init::Array = Array{Main.Lda.Topic,1}(undef, 1),
     docs_init::Array = Array{Main.Lda.TopicBasedDocument,1}(undef, 1),
-    ω_init::Array{Float64,1} = zeros(1), ω_tol::Float64 = 0.01, rel_tol::Bool = false,
-    interactions::Array{Int64,1}=Array{Int64,1}([]), batch::Bool=false, EM_split::Float64 = 0.75,
-    leave_one_topic_out::Bool=false, plot_ω::Bool = false)
+    ω_init::Array{Float64,1} = zeros(1), ω_tol::Float64 = 0.01,
+    interactions::Bool=false, batch::Bool=false, EM_split::Float64 = 0.75)
+
+    error("Not ready yet")
 
     # Define EM split
     if batch
@@ -47,18 +47,8 @@ function BTR_EMGibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
     # Deal with no x case and pre-specified σ2
     if size(x_Estep,1) == D
         J = size(x_Estep,2)
-        J_inter = 0
-        J_nointer = J
-        if length(interactions) > 0
-            @assert length(interactions) <= J "Can't have more interactions than x variables"
-            J_inter = length(interactions)*ntopics
-            J_nointer = J - length(interactions)
-            no_interactions = setdiff(1:J, interactions)
-        end
     else
         J = 0
-        J_inter = 0
-        J_nointer = 0
     end
     if σ2 == 0.
         est_σ2 = true
@@ -67,19 +57,12 @@ function BTR_EMGibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
         est_σ2 = false
     end
 
-    ### Regression variables
-    # Are we leaving one topic out?
-    if leave_one_topic_out
-        n_ωz = ntopics - 1::Int64
-    else
-        n_ωz = ntopics::Int64
-    end
+    # Regression variables
     #ω = μ_ω*ones(ntopics+J+(ntopics*J))::Array{Float64,1}
-    if length(interactions) > 0
-        ω = μ_ω*ones(ntopics+J_inter + J_nointer)::Array{Float64,1}
-        ω_post = zeros(length(ω), M_iteration)::Array{Float64,2}
-        ω_zx = ω[(ntopics+1):(ntopics+J_inter)]::Array{Float64,1}
-        ω_x = ω[(ntopics+J_inter+1):length(ω)]::Array{Float64,1}
+    if interactions
+        ω = μ_ω*ones(ntopics+(ntopics*J))::Array{Float64,1}
+        ω_post = zeros(ntopics+(ntopics*J), M_iteration)::Array{Float64,2}
+        ω_zx = ω[(ntopics+1):length(ω)]::Array{Float64,1}
     else
         ω = μ_ω*ones(ntopics+J)::Array{Float64,1}
         ω_post = zeros(ntopics+J+(ntopics*J), M_iteration)
@@ -120,31 +103,27 @@ function BTR_EMGibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
     end
 
     # Vector for topic probabilities
-    probs = Vector{Float64}(undef, ntopics)::Array{Float64,1}
+    probs::Array{Float64,1} = Vector{Float64}(undef, ntopics)
     # Vector of topic counts
-    topic_counts = getfield.(docs, :topicidcount)::Array{Array{Int64,1},1}
+    topic_counts::Array{Array{Int64,1},1} = getfield.(docs, :topicidcount)
 
     # Placeholders to store the document-topic and topic-word distributions
-    θ = zeros(ntopics,D)::Array{Float64,2}
-    θ_avg = zeros(ntopics,D)::Array{Float64,2}
-    θ_Mstep = zeros(ntopics,size(y_Mstep,1))::Array{Float64,2}
-    β = zeros(ntopics,V)::Array{Float64,2}
-    β_avg = zeros(ntopics,V)::Array{Float64,2}
-    term1_avg = zeros(ntopics,D)::Array{Float64,2}
-    term2_avg = zeros(ntopics,D)::Array{Float64,2}
-    term3_avg = zeros(ntopics,D)::Array{Float64,2}
+    θ::Array{Float64,2} = zeros(ntopics,D)
+    θ_avg::Array{Float64,2} = zeros(ntopics,D)
+    θ_Mstep::Array{Float64,2} = zeros(ntopics,size(y_Mstep,1))
+    β::Array{Float64,2} = zeros(ntopics,V)
+    β_avg::Array{Float64,2} = zeros(ntopics,V)
+    term1_avg::Array{Float64,2} = zeros(ntopics,D)
+    term2_avg::Array{Float64,2} = zeros(ntopics,D)
+    term3_avg::Array{Float64,2} = zeros(ntopics,D)
     # Optional placeholder for the average Z in each document across iterations
-    Z_bar = zeros(ntopics,D)::Array{Float64,2}
-    Z_bar_avg = zeros(ntopics,D)::Array{Float64,2}
-    Z_bar_Mstep = zeros(ntopics,size(y_Mstep,1))::Array{Float64,2}
-    #ω_zx = zeros(ntopics*J)::Array{Float64,1}
-    ω_docspec = zeros(ntopics)::Array{Float64,1}
-    inter_effects = zeros(size(y_Mstep,1),(J_inter))::Array{Float64,2}::Array{Float64,2}
-    regressors = zeros(size(y_Mstep,1), length(ω))::Array{Float64,2}
-
-    # Placeholder to keep track of ω across EM iterations
-    ω_iters = zeros(length(ω),EM_iteration+1)
-    ω_diff = zeros(length(ω))::Array{Float64,1}
+    Z_bar::Array{Float64,2} = zeros(ntopics,D)
+    Z_bar_avg::Array{Float64,2} = zeros(ntopics,D)
+    Z_bar_Mstep::Array{Float64,2} = zeros(ntopics,size(y_Mstep,1))
+    ω_zx::Array{Float64,1} = zeros(ntopics*J)
+    ω_docspec::Array{Float64,1} = zeros(ntopics)::Array{Float64,1}
+    inter_effects::Array{Float64,2} = zeros(size(y_Mstep,1),(ntopics*J))::Array{Float64,2}
+    regressors::Array{Float64,2} = zeros(size(y_Mstep,1), length(ω))
 
     for em in 1:EM_iteration
         # Gibbs sampling E-step
@@ -155,15 +134,14 @@ function BTR_EMGibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
             # Run through all documents, assigning z
             for (dd,doc) in enumerate(docs)
                 # Extract covariates for doc, if there are any
-                if J > 0 && length(interactions) == 0
+                if J > 0 && !interactions
                     x_dd = x_Estep[dd,:]::Array{Float64,1}
                     ω_docspec = ω_z
-                elseif J > 0 && length(interactions) > 0
-                    x_dd = x_Estep[dd,no_interactions]::Array{Float64,1}
+                elseif J > 0 && interactions
                     ω_docspec = zeros(ntopics)
-                    for jj in 1:length(interactions)
+                    for jj in 1:J
                         col_range = (jj*ntopics-ntopics+1):(jj*ntopics)
-                        ω_docspec.+= ω_zx[col_range]*x_Estep[dd,interactions[jj]]
+                        ω_docspec.+= ω_zx[col_range]*x_Estep[dd,jj]
                     end
                     ω_docspec .+=ω_z
                 else
@@ -179,10 +157,10 @@ function BTR_EMGibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
                     N_d = length(doc.text) # Document length (minus this word)
 
                     # Residual for y given all other topic assignments
-                    if J > 0 && length(interactions) == 0
+                    if J > 0 && !interactions
                         res = (y_Estep[dd] - dot(ω_x, x_dd) - dot(ω_z,doc.topicidcount)./N_d)
-                    elseif J > 0 && length(interactions) > 0
-                        res = (y_Estep[dd] - dot(ω_x, x_dd) - dot(ω_docspec,doc.topicidcount)./N_d)
+                    elseif J > 0 && interactions
+                        res = (y_Estep[dd] - dot(ω_docspec,doc.topicidcount)./N_d)
                     else
                         res = (y_Estep[dd] - dot(ω_docspec,doc.topicidcount)./N_d)
                     end
@@ -259,25 +237,23 @@ function BTR_EMGibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
         # M step (Z first, then x)
         if batch
             display(join(["M step topic assignments"]))
-            Z_bar_Mstep =
+            θ_Mstep, Z_bar_Mstep =
                 LDA_Gibbs_predict(dtm_Mstep, ntopics, β_avg,
                 α = α, iteration = M_iteration, burnin = 100)
-            #@assert !any(isnan.(Z_bar_Mstep)) "NaN in Z_bar_Mstep"
-            #replace_nan!(Z_bar_Mstep, 1/ntopics)
             @assert any(Z_bar_Mstep.!= 1/ntopics) "Need some documents in each step"
         else
             Z_bar_Mstep= Z_bar_avg
         end
-        # Create regressors for M_step
+        #
         if J > 0
-            if length(interactions) == 0
+            if !interactions
                 regressors = hcat(transpose(Z_bar_Mstep), x_Mstep)::Array{Float64,2}
             else
-                for jj in 1:length(interactions)
+                for jj in 1:J
                     col_range= (jj*ntopics-ntopics+1):(jj*ntopics)
-                    inter_effects[:,col_range] = transpose(Z_bar_Mstep).*vec(x_Mstep[:,interactions[jj]])
+                    inter_effects[:,col_range] = transpose(Z_bar_Mstep).*vec(x_Mstep[:,jj])
                 end
-                regressors = hcat(transpose(Z_bar_Mstep), inter_effects,x_Mstep[:,no_interactions])::Array{Float64,2}
+                regressors = hcat(transpose(Z_bar_Mstep), inter_effects)::Array{Float64,2}
             end
         else
             regressors = hcat(transpose(Z_bar_Mstep))::Array{Float64,2}
@@ -308,55 +284,36 @@ function BTR_EMGibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
             σ2 = mean(σ2_post)
         end
 
-
-        ω_iters[:,em+1]= ω_new
-
-        # Calculate change in ω for convergence
-        ω_diff = abs.(ω .- ω_new)
-        ω_diff[ω_diff.<ω_tol] = zeros(sum(ω_diff.<ω_tol))
-        if rel_tol
-            ω_diff ./=abs.(ω)
-        end
-
-        display(join(["M step complete, MSE: ", σ2]))
-        if plot_ω
-            display(plot(transpose(ω_iters[:,1:(em+1)]),legend=false))
-            display(join(["Coefficient updates:", ω_diff], " "))
-        end
-
-        if maximum(ω_diff) < ω_tol
+        if maximum(abs.(ω .- ω_new)) < ω_tol
             ω = ω_new::Array{Float64,1}
             ω_z = ω[1:ntopics]::Array{Float64,1}
-            if length(interactions) == 0
+            if !interactions
                 ω_x = ω[(ntopics+1):(ntopics+J)]::Array{Float64,1}
             else
-                ω_zx = ω[(ntopics+1):(ntopics+J_inter)]::Array{Float64,1}
-                ω_x = ω[(ntopics+J_inter+1):length(ω)]::Array{Float64,1}
+                ω_zx = ω[(ntopics+1):length(ω)]::Array{Float64,1}
             end
             break
         else
             ω = ω_new::Array{Float64,1}
             ω_z = ω[1:ntopics]::Array{Float64,1}
-            if length(interactions) == 0
+            if !interactions
                 ω_x = ω[(ntopics+1):(ntopics+J)]::Array{Float64,1}
             else
-                ω_zx = ω[(ntopics+1):(ntopics+J_inter)]::Array{Float64,1}
-                ω_x = ω[(ntopics+J_inter+1):length(ω)]::Array{Float64,1}
+                ω_zx = ω[(ntopics+1):length(ω)]::Array{Float64,1}
             end
         end
-
 
         # Extract coefficients for z and x
         #ω_z = ω[1:ntopics]::Array{Float64,1}
         #ω_x = ω[(ntopics+1):(ntopics+J)]::Array{Float64,1}
 
-
+        display(join(["M step complete, MSE: ", σ2]))
+        display(join(["Coefficients:", ω], " "))
 
 
     end
     return (β = β_avg, θ = θ_avg, Z_bar = Z_bar_avg,
         ω = ω, Σ = Σ, σ2 = σ2, docs = docs, topics = topics,
-        ω_post = ω_post, σ2_post = σ2_post, Z_bar_Mstep = Z_bar_Mstep,
-        ω_iters = ω_iters)
+        ω_post = ω_post, σ2_post = σ2_post, Z_bar_Mstep = Z_bar_Mstep)
 
 end

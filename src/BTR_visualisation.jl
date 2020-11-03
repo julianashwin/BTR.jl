@@ -102,7 +102,7 @@ function BTR_plot(β::Array{Float64,2}, ω_post::Array{Float64,2};
     topic_df.term = deepcopy(vocab)
     ytick_words = String[]
     for kk in 1:ntopics
-        temp_df = last(sort!(topic_df, [kk], rev = false), nwords)
+        temp_df = first(sort!(topic_df, [kk], rev = true), nwords)
         top_words[:,kk] = temp_df.term
         push!(ytick_words, join(temp_df.term, "."))
     end
