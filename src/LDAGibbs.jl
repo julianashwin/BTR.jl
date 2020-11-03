@@ -116,7 +116,7 @@ function LDAGibbs(ldamodel::BTRModel)::BTRModel
     Z_bar = Matrix(transpose(ldamodel.Z_bar))
     x = vcat(getfield.(ldamodel.crps.docs, :x)...)
     inter_effects = zeros(length(docs), ntopics*length(interactions))::Array{Float64,2}
-    for jj in 1:length(ldaopts.interactions)
+    for jj in 1:length(opts.interactions)
         col_range = ((jj*ntopics-ntopics+1):(jj*ntopics))
         inter_effects[:,col_range] = Z_bar.*vec(x[:,interactions[jj]])
     end

@@ -60,8 +60,8 @@ function btr_traintestsplit(dtm_in::SparseMatrixCSC{Int64,Int64}, docidx_dtm::Ar
     docidx_vars_train::Array{Int64,1} = docidx_vars[train_vars]
     docidx_vars_test::Array{Int64,1} = docidx_vars[test_vars]
     # Split the DTM into training and test
-    dtm_train::SparseMatrixCSC{Int64,Int64} = dtm_sparse.dtm[train_docs,:]
-    dtm_test::SparseMatrixCSC{Int64,Int64} = dtm_sparse.dtm[test_docs,:]
+    dtm_train::SparseMatrixCSC{Int64,Int64} = dtm_in[train_docs,:]
+    dtm_test::SparseMatrixCSC{Int64,Int64} = dtm_in[test_docs,:]
     # Split y (and x) into training and test
     y_train::Array{Float64,1} = y[train_vars]
     y_test::Array{Float64,1} = y[test_vars]

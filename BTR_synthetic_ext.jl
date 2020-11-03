@@ -22,9 +22,8 @@ pkg> dev https://github.com/julianashwin/BTR.jl
 
 """
 
-using Revise # V useful in development as don't have to reload julia after redefining a struct etc
-#using BTR
-include("src/BTR_dev.jl")
+using Revise, BTR
+#include("src/BTR_dev.jl")
 using TextAnalysis, DataFrames, CSV, Plots
 using StatsPlots, StatsBase, Plots.PlotMeasures, Distributions, Random
 
@@ -164,8 +163,10 @@ vocab = dtm_sparse.terms
 """
 Generate word count variable from DTM
 """
+## Define wordlist
 list1 = ["1","test"]
 
+## Get wordcounts
 list1_counts = hcat(Float64.(wordlistcounts(dtm_sparse.dtm,vocab,list1)))
 list1_counts = group_mean(list1_counts, docidx_dtm)
 list1_score = (list1_counts.-mean(list1_counts))./std(list1_counts)
@@ -178,6 +179,7 @@ list1_score = (list1_counts.-mean(list1_counts))./std(list1_counts)
 """
 Split into training and test sets (by doc_idx) and convert to BTRRawData structure
 """
+## Extract sparse matrix and create BTRRawData structure(s)
 dtm_in = dtm_sparse.dtm
 train_data, test_data = btr_traintestsplit(dtm_in, docidx_dtm, docidx_vars, y, x = x,
     train_split = 0.75, shuffle_obs = true)
@@ -185,8 +187,8 @@ train_data, test_data = btr_traintestsplit(dtm_in, docidx_dtm, docidx_vars, y, x
 all_data = DocStructs.BTRRawData(dtm_in, docidx_dtm, docidx_vars, y, x)
 ## Visualise the training-test split
 histogram(train_data.docidx_dtm, bins = 1:N, label = "training set",
-    xlab = "Observation", ylab= "Paragraphs", c=1, lc=1)
-display(histogram!(test_data.docidx_dtm, bins = 1:N, label = "test set", c=2, lc=2))
+    xlab = "Observation", ylab= "Paragraphs", c=1, lc=nothing)
+display(histogram!(test_data.docidx_dtm, bins = 1:N, label = "test set", c=2, lc=nothing))
 if save_files; savefig("figures/synth_trainsplit.pdf"); end;
 
 
@@ -194,17 +196,15 @@ if save_files; savefig("figures/synth_trainsplit.pdf"); end;
 Save the synthetic data to csv files
 """
 ## DataFrame for regression data
-df = DataFrame(#doc_id = doc_idx,
+df = DataFrame(doc_id = docidx_vars,
                y = y,
                x1 = x[:,1],
                x2 = x[:,2],
                Z_bar1 = Z_bar_all[:,1],
                Z_bar2 = Z_bar_all[:,2],
-               Z_bar3 = Z_bar_all[:,3],
-               #text = docs_all
-               )
+               Z_bar3 = Z_bar_all[:,3])
 if save_files
-    dtmtodfs(dtm_sparse.dtm, doc_idx, vocab, save_dir = "data")
+    dtmtodfs(dtm_sparse.dtm, docidx_dtm, vocab, save_dir = "data")
     CSV.write("data/synth_data.csv", df)
 end
 
@@ -212,6 +212,7 @@ end
 """
 Set priors and estimation optioncs here to be consistent across models
 """
+## Initialiase estimation options
 btropts = BTROptions()
 ## Number of topics
 btropts.ntopics = 3
@@ -446,7 +447,7 @@ mse_slda_blr = mean((test_data.y .- y_pred_slda_blr).^2)
 Compare out of sample performance for each model
 """
 ## Restrict range so that figure isn't too busy
-plot_range = 1:50
+plot_range = 500:550
 # True data
 plot(test_data.y[plot_range], linestyle = :solid,
     label = join(["True data"]), title = "")

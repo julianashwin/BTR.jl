@@ -103,7 +103,7 @@ end
 """
 Function that generate bar topics for synthetic data
 """
-function bartopics(η::Float64, K::Int64, Y::Int64)
+function bartopics(η::Float64, K::Int64, V::Int64)
     β::Array{Float64,2} = η.*zeros(K,V)
     toplength::Int64 = floor(Int, V/K)
     start::Int64 = 1
