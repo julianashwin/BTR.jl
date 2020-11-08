@@ -87,7 +87,7 @@ end
 
 
 # Afternative function if we have an empirical distribution rather than mean and variance
-function BTR_plot(β::Array{Float64,2}, ω_post::Array{Float64,2};
+function BTR_plot(β::Array{Float64,2}, ω_post::Array{Float64,2}, vocab::Array{String,1};
     nwords::Int64 = 10, plt_title::String = "", left_mar::Int64 = 7,
     fontsize::Int64 = 6, title_size::Int64 = 14,
     interactions::Array{Int64,1}=Array{Int64,1}([]))
