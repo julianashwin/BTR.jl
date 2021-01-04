@@ -2290,4 +2290,4 @@ wrongful,,,
 wrought,,,
 yawn,,,
 yearn,,,
-yelp,,,"), threaded = false, silencewarnings=true)
+yelp,,,"), DataFrame, threaded = false, silencewarnings=true)
