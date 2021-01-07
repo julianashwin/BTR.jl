@@ -22,8 +22,8 @@ pkg> dev https://github.com/julianashwin/BTR.jl
 
 """
 
-using Revise, BTR
-#include("src/BTR_dev.jl")
+#using Revise, BTR
+include("src/BTR_dev.jl")
 using TextAnalysis, DataFrames, CSV, Plots
 using StatsPlots, StatsBase, Plots.PlotMeasures, Distributions, Random
 
@@ -44,7 +44,7 @@ Generate some synthetic data
 ## Size of sample and number of topics
 K = 3 # number of topics
 V = 9 # length of vocabulary (number of unique words)
-D = 5000 # number of documents
+D = 50000 # number of documents
 Pd = 4 # number of paragraphs
 Np = 25 # number of words per document
 N = D+10 # total observations (N>=D)
@@ -57,7 +57,7 @@ DP = D*Pd # total number of non-empty paragraphs
 ω_x_true = [2., 0.] # coefficients on (topic,x) interactions
 #ω_true = cat(ω_z_true, ω_zx_true, ω_x_true, dims = 1) # all coefficients
 ω_true = cat(ω_z_true, ω_x_true, dims = 1) # all coefficients
-σ_y_true = 0.05 # residual variance
+
 
 ## Dirichlet priors for topics
 α = 1.0 # prior for θ (document-topic distribution)
@@ -91,41 +91,76 @@ Z_bar_all[1:DP,:] = Z_bar_true
 
 ## Generate x regressors
 # Use word counts to define x so that it is correlated with topics
-#x1 = zeros(NP,1)
 x1 = zeros(N,1)
 x2 = randn(N,1)
-#x2 = reshape(repeat(x2, inner = Pd),(NP,1))
 x1[1:D] = group_mean(hcat(Array(Float64.(word_counts[:,1]))), docidx_dtm[1:DP])
 x1 = (x1.-mean(x1))./std(x1)
-#x1 = reshape(repeat(vec(group_mean(x1, doc_idx)), inner = Pd),(NP,1))
 x = Array{Float64,2}(hcat(x1,x2))
-ϵ_true = rand(Normal(0,sqrt(σ_y_true)), N)
-
-## Generate interaction regressors
-#inter_effects = zeros(NP,(K*size(x1,2)))
-#for jj in 1:size(x1,2)
-#    col_range= (jj*K-K+1):(jj*K)
-#    inter_effects[:,col_range] = Z_bar_all.*vec(x[:,jj])
-#end
 
 ## Aggregate interactions to paragraph level
-# Aggregate inter_effects and Z_bar (straight mean is fine as long as all docs have same number of paras)
-#inter_effects = reshape(vec(group_mean(inter_effects, doc_idx)),(N,K))
 Z_bar_all =reshape(vec(group_mean(Z_bar_all, docidx_dtm)),(N,K))
 
+regressors = hcat(Z_bar_all, x)
 
 ## Generate outcome variable
-#y = Z_bar_all*ω_z_true + inter_effects*ω_zx_true + x2*ω_x_true + ϵ_true
-y = Z_bar_all*ω_z_true + x*ω_x_true + ϵ_true
-# ϵ_true, y, Z_bar_all,inter_effects and the xs that will not be interacted should be the same within groups
+p1 = exp.(regressors*ω_true) ./(1 .+ exp.(regressors*ω_true))
+y = [rand()<p1[ii] for ii in 1:N]
+y_lin = Z_bar_all*ω_z_true + x*ω_x_true
 
 """
-Test whether synthetic data gives correct coefficients in OLS regression with true data
+Save the synthetic data to csv files
 """
+## DataFrame for regression data
+df = DataFrame(doc_id = docidx_vars,
+               y = y,
+               x1 = x[:,1],
+               x2 = x[:,2],
+               Z_bar1 = Z_bar_all[:,1],
+               Z_bar2 = Z_bar_all[:,2],
+               Z_bar3 = Z_bar_all[:,3])
+if save_files
+    dtmtodfs(dtm_sparse.dtm, docidx_dtm, vocab, save_dir = "data")
+    CSV.write("data/synth_data.csv", df)
+end
+
+
+
+"""
+Test whether synthetic data gives correct coefficients in Logistic regression with true data
+"""
+using Turing, GLM
+using StatsFuns: logistic
+fm = @formula(y ~ 0 + Z_bar1 + Z_bar2 + Z_bar3 + x1 + x2)
+logit = glm(fm, df, Binomial(), LogitLink())
+display(logit)
+
+## Bayesian logistic regression as Turing.jl model
+@model function logistic_regression(X, y, σ)
+    N = size(X, 1)
+    M = size(X, 2)
+    length(y) == N || throw(DimensionMismatch("number of observations in `X` and `y` is not equal"))
+
+    # Priors of intercepts and coefficients.
+    coefficients ~ MvNormal(M, σ)
+
+    # Compute the likelihood of the observations.
+    values =  X * coefficients
+    for ii in 1:N
+        v = exp(values[ii])
+        p = v/(1+v)
+        y[ii] ~ Bernoulli(p)
+    end
+end;
+
+
+@time chain = sample(logistic_regression(regressors, y, 5), HMC(0.05, 10), MCMCThreads(), 1500, 1)
+
+
+
 ## Just observations with documents
 #regressors = hcat(Z_bar_all[1:D,:], inter_effects[1:D,:],x2[1:D,:])
 regressors = hcat(Z_bar_all[1:D,:], x[1:D,:])
-ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y[1:D])
+ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y_lin[1:D])
 #display(ols_coeffs)
 mse_true = mean((y[1:D] .- regressors*ols_coeffs).^2)
 
@@ -191,22 +226,6 @@ histogram(train_data.docidx_dtm, bins = 1:N, label = "training set",
 display(histogram!(test_data.docidx_dtm, bins = 1:N, label = "test set", c=2, lc=nothing))
 if save_files; savefig("figures/synth_trainsplit.pdf"); end;
 
-
-"""
-Save the synthetic data to csv files
-"""
-## DataFrame for regression data
-df = DataFrame(doc_id = docidx_vars,
-               y = y,
-               x1 = x[:,1],
-               x2 = x[:,2],
-               Z_bar1 = Z_bar_all[:,1],
-               Z_bar2 = Z_bar_all[:,2],
-               Z_bar3 = Z_bar_all[:,3])
-if save_files
-    dtmtodfs(dtm_sparse.dtm, docidx_dtm, vocab, save_dir = "data")
-    CSV.write("data/synth_data.csv", df)
-end
 
 
 """

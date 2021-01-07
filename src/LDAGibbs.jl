@@ -1,11 +1,12 @@
 """
 Function that estimates a standard LDA model on a BTRCorpus with (collapsed) Gibbs sampling
 """
-function LDAGibbs(ldamodel::BTRModel)::BTRModel
+function LDAGibbs(ldamodel::Union{BTRModel,BTCModel})::Union{BTRModel,BTCModel}
     ## Extract the important parts of btrmodel
-    docs::Array{DocStructs.BTRParagraphDocument,1} = ldamodel.crps.docs
+    docs::Array{Union{DocStructs.BTRParagraphDocument,DocStructs.BTCParagraphDocument},1} =
+        ldamodel.crps.docs
     topics::Array{DocStructs.Topic,1} = ldamodel.crps.topics
-    opts::BTROptions = ldamodel.options
+    opts::Union{BTROptions,BTCOptions} = ldamodel.options
     xregs::Array{Int64,1} = opts.xregs
     interactions::Array{Int64,1} = opts.interactions
     nointeractions::Array{Int64,1} = setdiff(xregs, interactions)

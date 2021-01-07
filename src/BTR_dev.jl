@@ -1,4 +1,4 @@
-using SparseArrays, LinearAlgebra, CSV, KernelDensity, Parameters
+using SparseArrays, LinearAlgebra, CSV, KernelDensity, Parameters, GLM
 using Random, Distributions, DataFrames, GLM, StatsBase, JSON
 using TextAnalysis, Plots, ProgressMeter, ColorSchemes, Plots.PlotMeasures
 

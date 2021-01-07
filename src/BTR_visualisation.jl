@@ -215,32 +215,99 @@ end
 Function that plots BTR output for synthetic data (currently only works for 3 topics)
     topic_ord re orders β, e.g. [3,2,1] would convert topic 3 to 1, and topic 1 to 3 (with 2 staying as 2)
 """
-function synth_data_plot(β,ω,Σ; true_ω = "no", topic_ord = [1,2,3])
+function synth_data_plot(β::Array{Float64,2}, ω::Array{Float64,1}, Σ::Array{Float64,1};
+    true_ω = "no", topic_ord = [1,2,3], plt_title::String = "", legend = false,
+    interactions = Array{Int64,1}([]), top_mar::Int = 0,
+    left_mar::Int = 0, bottom_mar::Int = 0,
+    ticksize::Int = 6, labelsize::Int = 12)
+    # Extract key info
+    n_draws = 10000
+    ω_dist =  MvNormal(ω, Σ)
+    ω_post =
+    ntopics = size(β,1)
+    ncoefs = size(ω_post,1)
     # Re-order β
     β = β[topic_ord,:]
-    cmin = minimum(ω .- maximum(vcat(0.1, 2.5*sqrt.(diag(Σ)))))
-    cmax = maximum(ω .+ maximum(vcat(0.1, 2.5*sqrt.(diag(Σ)))))
+    ω_post = ω_post[topic_ord,:]
+    cmin = minimum(ω_post) - 0.25
+    cmax = maximum(ω_post) + 0.25
     if true_ω == "no"
         coef_true = fill("no", length(ω))
     else
-        coef_true = true_ω
+        true_ω = true_ω
         cmin = minimum(vcat(cmin, true_ω .- 0.1))
         cmax = maximum(vcat(cmax, true_ω .+ 0.1))
 
     end
     # Define plot layout
     l = @layout [
-        a{0.6w} [b{0.33h}
+        a{0.5w} [b{0.33h}
                  c{0.33h}
                  d{0.33h} ]]
     # Plot the estimated topics
-    p1 = heatmap(β, xlabel = "Vocab", ylabel = "Topic", yticks = 1:K)
+    p1 = heatmap(β, xlabel = "Vocab", ylabel = "Topic", yticks = 1:ntopics,
+        title= plt_title, legend = legend, left_margin = Int(left_mar)mm,
+        top_margin = Int(top_mar)mm, bottom_margin = Int(bottom_mar)mm)
+    plot!(xtickfontize = ticksize,ytickfontize = ticksize)
+    plts=[plot(),plot(),plot()]
     # Plot regression coefficient for each topic
-    p4 = coef_plot(ω[topic_ord[1]], sqrt(diag(Σ)[topic_ord[1]]), cmin, cmax, coef_no = 1, true_ω = coef_true[1])
-    p3 = coef_plot(ω[topic_ord[2]], sqrt(diag(Σ)[topic_ord[2]]), cmin, cmax, coef_no = 2, true_ω = coef_true[2])
-    p2 = coef_plot(ω[topic_ord[3]], sqrt(diag(Σ)[topic_ord[3]]), cmin, cmax, coef_no = 3, true_ω = coef_true[3])
-    plt = plot(p1, p2, p3, p4, layout = l)
+    for kk in 1:ntopics
+        ptemp=plot(legend=false,plot(xlim = (cmin, cmax), yticks=false))
+        ω_kk = sort(ω_post[kk,:])
+        lo = ω_kk[Int(round(0.025*n_draws))]
+        hi = ω_kk[Int(round(0.975*n_draws))]
+        mid_lo = ω_kk[Int(round(0.25*n_draws))]
+        mid_hi =  ω_kk[Int(round(0.75*n_draws))]
+        mid = mean(ω_kk)
+        plot!([lo,hi], [kk, kk], color = :dodgerblue)
+        plot!([mid_lo, mid_hi], [kk+0.2, kk+0.2], color = :lightskyblue2,
+        fillrange=[kk-0.2, kk-0.2], fillalpha = 0.5)
+        plot!([mid_lo, mid_hi], [kk-0.2, kk-0.2], color = :lightskyblue2)
+        plot!([mid, mid], [kk-0.4, kk+0.4], color = :blue)
+        plot!([lo, lo], [kk-0.1, kk+0.1], color = :dodgerblue)
+        plot!([hi, hi], [kk-0.1, kk+0.1], color = :dodgerblue)
+        if true_ω != "no"
+            scatter!([true_ω[kk]], [kk], color = :red)
+        end
+        plot!(xtickfontize = ticksize,ytickfontize = ticksize)
+        if kk>1
+            plot!(xticklabel = false)
+        else
+            plot!(xlabel = "Coefficient")
+        end
+
+        # for int in 1:length(interactions)
+        #     coef_range = ntopics+ntopics*int-ntopics+1:ntopics+ntopics*int
+        #     ω_ints = ω_post[coef_range,:]
+        #     ω_int = sort(ω_ints[kk,:])
+        #     lo = ω_int[Int(round(0.025*n_draws))]
+        #     hi = ω_int[Int(round(0.975*n_draws))]
+        #     mid_lo = ω_int[Int(round(0.25*n_draws))]
+        #     mid_hi =  ω_int[Int(round(0.75*n_draws))]
+        #     mid = mean(ω_int)
+        #     plot!([lo,hi], [kk, kk], color = :darkolivegreen1)
+        #     plot!([mid_lo, mid_hi], [kk+0.2, kk+0.2], color = :darkseagreen1,
+        #     fillrange=[kk-0.2, kk-0.2], fillalpha = 0.5)
+        #     plot!([mid_lo, mid_hi], [kk-0.2, kk-0.2], color = :darkseagreen1)
+        #     plot!([mid, mid], [kk-0.4, kk+0.4], color = :olivedrab1)
+        #     plot!([lo, lo], [kk-0.1, kk+0.1], color = :darkolivegreen1)
+        #     plot!([hi, hi], [kk-0.1, kk+0.1], color = :darkolivegreen1)
+        #     if true_ω != "no"
+        #         scatter!([true_ω[coef_range[kk]]], [kk], color = :red)
+        #     end
+        #
+        # end
+        plts[kk]=ptemp
+    end
+
+    plt = plot(p1, plts[3], plts[2], plts[1], layout = l)
+    #plt = plot(p1, plot(), plot(), plot(), layout = l)
+    plot!(xtickfontsize=ticksize)
+    plot!(ytickfontsize=ticksize)
+    plot!(xlabelfontsize=labelsize)
+    plot!(ylabelfontsize=labelsize)
     return plt
+
 end
 # Afternative function if we have an empirical distribution rather than mean and variance
 function synth_data_plot(β::Array{Float64,2}, ω_post::Array{Float64,2};
