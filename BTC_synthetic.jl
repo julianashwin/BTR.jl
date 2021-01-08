@@ -22,8 +22,8 @@ pkg> dev https://github.com/julianashwin/BTR.jl
 
 """
 
-#using Revise, BTR
-include("src/BTR_dev.jl")
+using Revise, BTR
+#include("src/BTR_dev.jl")
 using TextAnalysis, DataFrames, CSV, Plots, GLM
 using StatsPlots, StatsBase, Plots.PlotMeasures, Distributions, Random
 
@@ -35,7 +35,7 @@ Plotting options
 gr()
 #pyplot()
 #plotly()
-save_files = false # Toggle whether you want to save figures and data as files
+save_files = true # Toggle whether you want to save figures and data as files
 
 """
 Generate some synthetic data
@@ -71,8 +71,7 @@ DP = D*Pd # total number of non-empty paragraphs
 
 heatmap(β_true, title = "", xlabel = "Vocab", ylabel = "Topic", yticks = 1:K,
     left_margin = 3mm,top_margin = 3mm, bottom_margin = 0mm)
-display(plot!(size =(200,300)))
-if save_files; savefig("figures/synth_class_true_beta.pdf"); end;
+if save_files; plot!(size =(200,300)); savefig("figures/synth_BTC/synth_class_true_beta.pdf"); end;
 
 ## Generate string documents and topic assignments
 docs, Z_true, topic_counts, word_counts = generate_docs(DP, Np, K, θ_true, β_true)
@@ -107,34 +106,10 @@ p1 = exp.(regressors*ω_true) ./(1 .+ exp.(regressors*ω_true))
 y = Array{Int64}([rand()<p1[ii] for ii in 1:N])
 y_lin = Z_bar_all*ω_z_true + x*ω_x_true
 
-"""
-Save the synthetic data to csv files
-"""
-## DataFrame for regression data
-df = DataFrame(doc_id = docidx_vars,
-               y = y,
-               x1 = x[:,1],
-               x2 = x[:,2],
-               Z_bar1 = Z_bar_all[:,1],
-               Z_bar2 = Z_bar_all[:,2],
-               Z_bar3 = Z_bar_all[:,3])
-if save_files
-    dtmtodfs(dtm_sparse.dtm, docidx_dtm, vocab, save_dir = "data")
-    CSV.write("data/synth_class_data.csv", df)
-end
-
-
 
 """
 Test whether synthetic data gives correct coefficients in Logistic regression with true data
 """
-
-fm = @formula(y ~ 0 + Z_bar1 + Z_bar2 + Z_bar3 + x1 + x2)
-logit1 = glm(fm, df, Binomial(), LogitLink())
-display(logit1)
-logit2 = fit(GeneralizedLinearModel, regressors, y, Binomial(), LogitLink())
-display(logit2)
-
 ## With true data and correct model
 regressors = hcat(Z_bar_all, x)
 logit_true_all = fit(GeneralizedLinearModel, regressors, y, Binomial(), LogitLink())
@@ -187,6 +162,23 @@ list1_score = (list1_counts.-mean(list1_counts))./std(list1_counts)
 @assert list1_score == x1
 
 
+"""
+Save the synthetic data to csv files
+"""
+## DataFrame for regression data
+df = DataFrame(doc_id = docidx_vars,
+               y = y,
+               x1 = x[:,1],
+               x2 = x[:,2],
+               Z_bar1 = Z_bar_all[:,1],
+               Z_bar2 = Z_bar_all[:,2],
+               Z_bar3 = Z_bar_all[:,3])
+if save_files
+    dtmtodfs(dtm_sparse.dtm, docidx_dtm, vocab, save_dir = "data/class_")
+    CSV.write("data/synth_class_data.csv", df)
+end
+
+
 
 
 """
@@ -202,7 +194,7 @@ all_data = DocStructs.BTCRawData(dtm_in, docidx_dtm, docidx_vars, y, x)
 histogram(train_data.docidx_dtm, bins = 1:N, label = "training set",
     xlab = "Observation", ylab= "Paragraphs", c=1, lc=nothing)
 display(histogram!(test_data.docidx_dtm, bins = 1:N, label = "test set", c=2, lc=nothing))
-if save_files; savefig("figures/synth_class_trainsplit.pdf"); end;
+if save_files; savefig("figures/synth_BTC/synth_class_trainsplit.pdf"); end;
 
 
 
@@ -254,12 +246,10 @@ logit_notext = fit(GeneralizedLinearModel, regressors_train, train_data.y, Binom
 display(logit_notext)
 # Assess out-of-sample performance
 prediction_notext = GLM.predict(logit_notext,regressors_test)
-prediction_class_notext = [if x < 0.5 0 else 1 end for x in prediction];
+prediction_class_notext = [if x < 0.5 0 else 1 end for x in prediction_notext];
 correct_notext = mean(test_data.y .== prediction_class_notext)
 mse_notext = mean((prediction_notext.- test_data.y).^2)
 
-topics_tr1 = gettopics(btccrps_tr.docs)
-topics_ts1 = gettopics(btccrps_ts.docs)
 
 
 """
@@ -283,7 +273,7 @@ topic_order = synth_reorder_topics(btcmodel.β)
 plt = synth_data_plot(btcmodel.β, btcmodel.ω, btcmodel.Σ, true_ω = ω_true,
     topic_ord = topic_order, plt_title = "", legend = false,
     left_mar = 3,top_mar = 3, bottom_mar = 0, ticksize = 12, labelsize = 25)
-if save_files; savefig("figures/synth_class_BTC.pdf"); end;
+if save_files; savefig("figures/synth_BTC/synth_class_BTC.pdf"); end;
 
 ## Out of sample prediction in test set
 btc_predicts = BTCpredict(btccrps_ts, btcmodel)

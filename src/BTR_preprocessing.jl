@@ -22,9 +22,9 @@ function dtmtodfs(dtm_in::SparseMatrixCSC{Int64,Int64}, doc_idx::Array{Int64,1},
     vocab_df = DataFrame(term = vocab, term_id = 1:size(dtm_in,2))
 
     if save_dir != ""
-        CSV.write(join([save_dir,"/rowids.csv"]), rowid_df)
-        CSV.write(join([save_dir,"/terms.csv"]), vocab_df)
-        CSV.write(join([save_dir,"/dtm.csv"]), dtm_df)
+        CSV.write(join([save_dir,"_rowids.csv"]), rowid_df)
+        CSV.write(join([save_dir,"_terms.csv"]), vocab_df)
+        CSV.write(join([save_dir,"_dtm.csv"]), dtm_df)
     end
     return dtm_df, rowid_df, vocab_df
 end

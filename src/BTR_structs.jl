@@ -97,7 +97,7 @@ mutable struct BTCCorpus
     V::Int64
     C::Int64
 end
-BTRCorpus() = BTCCorpus(Vector{BTCParagraphDocument}(undef,0),
+BTCCorpus() = BTCCorpus(Vector{BTCParagraphDocument}(undef,0),
 Vector{Topic}(undef,0), Vector{Int64}([]), 0, 0, 0, 2)
 
 

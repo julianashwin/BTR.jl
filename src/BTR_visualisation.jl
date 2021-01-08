@@ -215,7 +215,7 @@ end
 Function that plots BTR output for synthetic data (currently only works for 3 topics)
     topic_ord re orders β, e.g. [3,2,1] would convert topic 3 to 1, and topic 1 to 3 (with 2 staying as 2)
 """
-function synth_data_plot(β::Array{Float64,2}, ω::Array{Float64,1}, Σ::Array{Float64,1};
+function synth_data_plot(β::Array{Float64,2}, ω::Array{Float64,1}, Σ::Array{Float64,2};
     true_ω = "no", topic_ord = [1,2,3], plt_title::String = "", legend = false,
     interactions = Array{Int64,1}([]), top_mar::Int = 0,
     left_mar::Int = 0, bottom_mar::Int = 0,
@@ -275,28 +275,7 @@ function synth_data_plot(β::Array{Float64,2}, ω::Array{Float64,1}, Σ::Array{F
         else
             plot!(xlabel = "Coefficient")
         end
-
-        # for int in 1:length(interactions)
-        #     coef_range = ntopics+ntopics*int-ntopics+1:ntopics+ntopics*int
-        #     ω_ints = ω_post[coef_range,:]
-        #     ω_int = sort(ω_ints[kk,:])
-        #     lo = ω_int[Int(round(0.025*n_draws))]
-        #     hi = ω_int[Int(round(0.975*n_draws))]
-        #     mid_lo = ω_int[Int(round(0.25*n_draws))]
-        #     mid_hi =  ω_int[Int(round(0.75*n_draws))]
-        #     mid = mean(ω_int)
-        #     plot!([lo,hi], [kk, kk], color = :darkolivegreen1)
-        #     plot!([mid_lo, mid_hi], [kk+0.2, kk+0.2], color = :darkseagreen1,
-        #     fillrange=[kk-0.2, kk-0.2], fillalpha = 0.5)
-        #     plot!([mid_lo, mid_hi], [kk-0.2, kk-0.2], color = :darkseagreen1)
-        #     plot!([mid, mid], [kk-0.4, kk+0.4], color = :olivedrab1)
-        #     plot!([lo, lo], [kk-0.1, kk+0.1], color = :darkolivegreen1)
-        #     plot!([hi, hi], [kk-0.1, kk+0.1], color = :darkolivegreen1)
-        #     if true_ω != "no"
-        #         scatter!([true_ω[coef_range[kk]]], [kk], color = :red)
-        #     end
-        #
-        # end
+        
         plts[kk]=ptemp
     end
 
