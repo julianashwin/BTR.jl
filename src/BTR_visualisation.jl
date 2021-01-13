@@ -40,8 +40,9 @@ end
 """
 Plot top words and coefficients for BLR output
 """
-function BTR_plot(β::Array{Float64,2}, ω::Array{Float64,1}, Σ::Array{Float64,2};
-    nwords::Int64 = 10, plt_title::String = "", fontsize::Int64 = 6)
+function BTR_plot(β::Array{Float64,2}, ω::Array{Float64,1}, Σ::Array{Float64,2},
+    vocab::Array{String,1}; nwords::Int64 = 10, plt_title::String = "",
+    fontsize::Int64 = 6)
     # Extract key info
     σ = sqrt.(diag(Σ))
     ntopics = size(β,1)
@@ -222,8 +223,7 @@ function synth_data_plot(β::Array{Float64,2}, ω::Array{Float64,1}, Σ::Array{F
     ticksize::Int = 6, labelsize::Int = 12)
     # Extract key info
     n_draws = 10000
-    ω_dist =  MvNormal(ω, Σ)
-    ω_post =
+    ω_post = rand(MvNormal(ω, Σ), n_draws)
     ntopics = size(β,1)
     ncoefs = size(ω_post,1)
     # Re-order β
@@ -275,7 +275,7 @@ function synth_data_plot(β::Array{Float64,2}, ω::Array{Float64,1}, Σ::Array{F
         else
             plot!(xlabel = "Coefficient")
         end
-        
+
         plts[kk]=ptemp
     end
 

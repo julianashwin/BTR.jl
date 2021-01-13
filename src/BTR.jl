@@ -1,11 +1,11 @@
 module BTR
 
 using SparseArrays, LinearAlgebra, CSV, KernelDensity, Parameters, GLM
-using Random, Distributions, DataFrames, GLM, StatsBase, JSON
+using Random, Distributions, DataFrames, GLM, StatsBase, JSON, JLD2
 using TextAnalysis, Plots, ProgressMeter, ColorSchemes, Plots.PlotMeasures
 
 """
-Add GLM to dependencies, update the exports
+Add JLD to dependencies, update the exports
 """
 
 
@@ -32,8 +32,10 @@ export BTCemGibbs, btcmodel_splitobs, btcmodel_combineobs
 export BTREstep, BTRMstep, BTCEstep, BTCMstep
 # Prediction functions
 export BTRpredict, BTCpredict
-# Visualisation function
+# Visualisation functions
 export coef_plot, BTR_plot, plot_topics, synth_data_plot, synth_reorder_topics
+# Evaluation functions
+export compute_perplexity, BTR_multipleruns, BTC_multipleruns
 # Other models and estimation strategies
 export BTRfullGibbs, BTRfullGibbspredict
 export LDAGibbs
@@ -59,6 +61,8 @@ include("BTRemGibbs.jl")
 include("BTRpredict.jl")
 # Visualisation functions
 include("BTR_visualisation.jl")
+# Model evaluation functions
+include("BTR_evaluation.jl")
 # Other models/estimation strategies
 include("BTRfullGibbs.jl")
 include("BTRfullGibbspredict.jl")

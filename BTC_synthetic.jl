@@ -22,25 +22,25 @@ pkg> dev https://github.com/julianashwin/BTR.jl
 
 """
 
-using Revise, BTR
-#include("src/BTR_dev.jl")
-using TextAnalysis, DataFrames, CSV, Plots, GLM
+#using Revise, BTR
+include("src/BTR_dev.jl")
+using TextAnalysis, DataFrames, CSV, Plots, GLM, LinearAlgebra
 using StatsPlots, StatsBase, Plots.PlotMeasures, Distributions, Random
 
 
 """
 Plotting options
 """
-# This sets the plotting backend: gr() is faster, pyplot() is prettier
+## Set the plotting backend: gr() is faster, pyplot() is prettier
 gr()
 #pyplot()
 #plotly()
 save_files = true # Toggle whether you want to save figures and data as files
 
+
 """
 Generate some synthetic data
 """
-
 ## Size of sample and number of topics
 K = 3 # number of topics
 V = 9 # length of vocabulary (number of unique words)
@@ -186,10 +186,10 @@ Split into training and test sets (by doc_idx) and convert to BTRRawData structu
 """
 ## Extract sparse matrix and create BTRRawData structure(s)
 dtm_in = dtm_sparse.dtm
-train_data, test_data = btc_traintestsplit(dtm_in, docidx_dtm, docidx_vars, y, x = x,
+train_data, test_data = btc_traintestsplit(dtm_in, docidx_dtm, docidx_vars, y, vocab, x = x,
     train_split = 0.75, shuffle_obs = true)
 # Alternatively, can convert the entier set to BTRRawData with
-all_data = DocStructs.BTCRawData(dtm_in, docidx_dtm, docidx_vars, y, x)
+all_data = DocStructs.BTCRawData(dtm_in, docidx_dtm, docidx_vars, y, x, vocab)
 ## Visualise the training-test split
 histogram(train_data.docidx_dtm, bins = 1:N, label = "training set",
     xlab = "Observation", ylab= "Paragraphs", c=1, lc=nothing)
@@ -260,7 +260,7 @@ btcopts.xregs = [1,2]
 btcopts.interactions = Array{Int64}([])
 
 ## Initialise BTRModel object
-btcmodel = BTCModel(crps = btccrps_tr, options = btcopts, vocab = vocab)
+btcmodel = BTCModel(crps = btccrps_tr, options = btcopts)
 
 ## Estimate BTR with EM-Gibbs algorithm
 btcopts.CVEM = :obs
@@ -273,13 +273,16 @@ topic_order = synth_reorder_topics(btcmodel.β)
 plt = synth_data_plot(btcmodel.β, btcmodel.ω, btcmodel.Σ, true_ω = ω_true,
     topic_ord = topic_order, plt_title = "", legend = false,
     left_mar = 3,top_mar = 3, bottom_mar = 0, ticksize = 12, labelsize = 25)
-if save_files; savefig("figures/synth_BTC/synth_class_BTC.pdf"); end;
+if save_files; plot!(size = (300,300)); savefig("figures/synth_BTC/synth_class_BTC.pdf"); end;
 
 ## Out of sample prediction in test set
 btc_predicts = BTCpredict(btccrps_ts, btcmodel)
 # Performance
 correct_btc = mean(test_data.y .== btc_predicts.y_pred)
 mse_btc = mean((test_data.y .- btc_predicts.p_pred).^2)
+btc_predicts.pplxy
+
+
 
 
 """
@@ -293,7 +296,7 @@ ldaopts.fullGibbs_iters = 100
 ldaopts.fullGibbs_thinning = 2
 ldaopts.burnin = 50
 
-ldamodel = BTCModel(crps = btccrps_tr, options = ldaopts, vocab = vocab)
+ldamodel = BTCModel(crps = btccrps_tr, options = ldaopts)
 ## Estimate LDA model on full training set
 ldamodel  = LDAGibbs(ldamodel)
 
@@ -309,15 +312,15 @@ plt = synth_data_plot(ldamodel.β, ldamodel.ω, ldamodel.Σ, true_ω = ω_z_true
     topic_ord = topic_order, plt_title = "",
     left_mar = 3,top_mar = 0, bottom_mar = 0, ticksize = 10, labelsize = 25)
 plot!(xticklabel = false)
-if save_files; plot!(size = (300,300)); savefig("figures/synth_class_LDA_Log.pdf"); end;
+if save_files; plot!(size = (300,300)); savefig("figures/synth_BTC/synth_class_LDA_Log.pdf"); end;
 
 
 ## Out of sample prediction
-lda_predicts = BTCpredict(btrcrps_ts, ldamodel)
+lda_predicts = BTCpredict(btccrps_ts, ldamodel)
 # Performance
 correct_lda = mean(test_data.y .== lda_predicts.y_pred)
 mse_lda = mean((test_data.y .- lda_predicts.p_pred).^2)
-
+lda_predicts.pplxy
 
 
 """
@@ -329,7 +332,7 @@ sldaopts.xregs = []
 sldaopts.interactions = []
 
 ## Initialise BTRModel object
-sldamodel = BTCModel(crps = btccrps_tr, options = sldaopts, vocab = vocab)
+sldamodel = BTCModel(crps = btccrps_tr, options = sldaopts)
 
 ## Estimate sLDA on residuals
 sldamodel = BTCemGibbs(sldamodel)
@@ -347,7 +350,7 @@ slda_predicts = BTCpredict(btccrps_ts, sldamodel)
 # Performance
 correct_nox = mean(test_data.y .== slda_predicts.y_pred)
 mse_nox = mean((test_data.y .- slda_predicts.p_pred).^2)
-
+slda_predicts.pplxy
 
 
 """
@@ -368,3 +371,9 @@ plot!(slda_predicts.p_pred[plot_range], linestyle = :dashdot,
 plot!(prediction_notext[plot_range], linestyle = :dot,
     label = join(["Logisitic (", round(mse_notext,digits = 3), ")"]))
 if save_files; savefig("figures/synth_class_mse_comparison.pdf"); end;
+
+
+subdirectory = "data/multipleruns/BTC/run_"
+nruns = 10
+opts = btcopts
+BTC_multipleruns(train_data, test_data, btcopts, nruns, subdirectory)

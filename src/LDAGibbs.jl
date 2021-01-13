@@ -18,7 +18,7 @@ function LDAGibbs(ldamodel::Union{BTRModel,BTCModel})::Union{BTRModel,BTCModel}
 
     # Check that everything matches up
     @assert opts.ntopics == ldamodel.crps.ntopics "ntopics in corpus and options must match"
-    @assert ldamodel.crps.V == length(ldamodel.vocab) "Vocab length in BTRModel and V in BTRCorpus do not match"
+    @assert ldamodel.crps.V == length(ldamodel.crps.vocab) "Vocab length in BTRModel and V in BTRCorpus do not match"
 
     # Placeholders to store assignments for each iteration
     β::Array{Float64,2} = zeros(ntopics,V)
@@ -126,6 +126,9 @@ function LDAGibbs(ldamodel::Union{BTRModel,BTCModel})::Union{BTRModel,BTCModel}
     # Renormalise θ and β to eliminate any numerical errors
     ldamodel.Z_bar ./= sum(ldamodel.Z_bar, dims=1)::Array{Float64,2}
     ldamodel.β ./= sum(ldamodel.β, dims=2)::Array{Float64,2}
+
+    display("Computing in-sample perplexity")
+    ldamodel.pplxy = compute_perplexity(ldamodel.crps, ldamodel.β, opts.α)
 
     return ldamodel
 end

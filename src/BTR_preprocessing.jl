@@ -35,7 +35,7 @@ end
 Function to split data into test and training sets for BTR
 """
 function btr_traintestsplit(dtm_in::SparseMatrixCSC{Int64,Int64}, docidx_dtm::Array{Int64,1},
-        docidx_vars::Array{Int64,1}, y::Array{Float64,1};
+        docidx_vars::Array{Int64,1}, y::Array{Float64,1}, vocab::Array{String,1};
         x::Array{Float64,2} = zeros(1,1),
         train_split::Float64 = 0.75, shuffle_obs::Bool = true)
     # Extract total number of documents/observations
@@ -79,8 +79,8 @@ function btr_traintestsplit(dtm_in::SparseMatrixCSC{Int64,Int64}, docidx_dtm::Ar
         display("No x variables provided")
     end
 
-    train_data = DocStructs.BTRRawData(dtm_train, docidx_dtm_train, docidx_vars_train, y_train, x_train)
-    test_data = DocStructs.BTRRawData(dtm_test, docidx_dtm_test, docidx_vars_test, y_test, x_test)
+    train_data = DocStructs.BTRRawData(dtm_train, docidx_dtm_train, docidx_vars_train, y_train, x_train, vocab)
+    test_data = DocStructs.BTRRawData(dtm_test, docidx_dtm_test, docidx_vars_test, y_test, x_test, vocab)
     return train_data, test_data
 
 end
@@ -90,7 +90,7 @@ end
 Function to split data into test and training sets for BTC
 """
 function btc_traintestsplit(dtm_in::SparseMatrixCSC{Int64,Int64}, docidx_dtm::Array{Int64,1},
-        docidx_vars::Array{Int64,1}, y::Array{Int64,1};
+        docidx_vars::Array{Int64,1}, y::Array{Int64,1}, vocab::Array{String,1};
         x::Array{Float64,2} = zeros(1,1),
         train_split::Float64 = 0.75, shuffle_obs::Bool = true)
     # Extract total number of documents/observations
@@ -134,8 +134,8 @@ function btc_traintestsplit(dtm_in::SparseMatrixCSC{Int64,Int64}, docidx_dtm::Ar
         display("No x variables provided")
     end
 
-    train_data = DocStructs.BTCRawData(dtm_train, docidx_dtm_train, docidx_vars_train, y_train, x_train)
-    test_data = DocStructs.BTCRawData(dtm_test, docidx_dtm_test, docidx_vars_test, y_test, x_test)
+    train_data = DocStructs.BTCRawData(dtm_train, docidx_dtm_train, docidx_vars_train, y_train, x_train, vocab)
+    test_data = DocStructs.BTCRawData(dtm_test, docidx_dtm_test, docidx_vars_test, y_test, x_test, vocab)
     return train_data, test_data
 
 end
@@ -146,7 +146,7 @@ Function that converts raw data into BTRdocs format
 """
 function create_btrcrps(dtm_in::SparseMatrixCSC{Int64,Int64}, docidx_dtm::Array{Int64,1},
         docidx_vars::Array{Int64,1}, y::Array{Float64,1}, x::Array{Float64,2},
-        ntopics::Int64)
+        ntopics::Int64, vocab::Array{String,1})
     # Need doc_idx labels to be divorced from the indices themselves to fill the array
     docidx_labels::Array{Int64,1} = unique(vcat(docidx_dtm, docidx_vars))
     D::Int64 = length(unique(docidx_labels))
@@ -199,13 +199,13 @@ function create_btrcrps(dtm_in::SparseMatrixCSC{Int64,Int64}, docidx_dtm::Array{
         next!(prog)
     end
 
-    btrcrps = DocStructs.BTRCorpus(btrdocs, topics, docidx_labels, D, ntopics, V)
+    btrcrps = DocStructs.BTRCorpus(btrdocs, topics, docidx_labels, D, ntopics, V, vocab)
 
     return btrcrps
 
 end
 create_btrcrps(rawdata::DocStructs.BTRRawData, ntopics::Int64) =
-    create_btrcrps(rawdata.dtm, rawdata.docidx_dtm, rawdata.docidx_vars, rawdata.y, rawdata.x, ntopics)
+    create_btrcrps(rawdata.dtm, rawdata.docidx_dtm, rawdata.docidx_vars, rawdata.y, rawdata.x, ntopics, rawdata.vocab)
 
 
 
@@ -214,7 +214,7 @@ Function that converts raw data into BTCdocs format
 """
 function create_btccrps(dtm_in::SparseMatrixCSC{Int64,Int64}, docidx_dtm::Array{Int64,1},
         docidx_vars::Array{Int64,1}, y::Array{Int64,1}, x::Array{Float64,2},
-        ntopics::Int64)
+        ntopics::Int64, vocab::Array{String,1})
     # Need doc_idx labels to be divorced from the indices themselves to fill the array
     docidx_labels::Array{Int64,1} = unique(vcat(docidx_dtm, docidx_vars))
     D::Int64 = length(unique(docidx_labels))
@@ -267,13 +267,13 @@ function create_btccrps(dtm_in::SparseMatrixCSC{Int64,Int64}, docidx_dtm::Array{
         next!(prog)
     end
 
-    btccrps = DocStructs.BTCCorpus(btcdocs, topics, docidx_labels, D, ntopics, V, C)
+    btccrps = DocStructs.BTCCorpus(btcdocs, topics, docidx_labels, D, ntopics, V, C, vocab)
 
     return btccrps
 
 end
 create_btccrps(rawdata::DocStructs.BTCRawData, ntopics::Int64) =
-    create_btccrps(rawdata.dtm, rawdata.docidx_dtm, rawdata.docidx_vars, rawdata.y, rawdata.x, ntopics)
+    create_btccrps(rawdata.dtm, rawdata.docidx_dtm, rawdata.docidx_vars, rawdata.y, rawdata.x, ntopics, rawdata.vocab)
 
 
 

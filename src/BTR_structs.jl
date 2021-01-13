@@ -18,10 +18,11 @@ mutable struct BTRRawData
     x::Array{Float64,2}
     N::Int64
     V::Int64
+    vocab::Array{String,1}
 end
-BTRRawData(dtm, docidx_dtm, docidx_vars, y, x::Array{Float64,2}) = BTRRawData(dtm, docidx_dtm, docidx_vars, y, x, length(y), size(dtm,2))
-BTRRawData(dtm, docidx_dtm, docidx_vars, y, x, N::Int64) = BTRRawData(dtm, docidx_dtm, docidx_vars, y, x, N, size(dtm,2))
-BTRRawData(dtm, docidx_dtm, docidx_vars, y, N::Int64) = BTRRawData(dtm, docidx_dtm, docidx_vars, y, zeros(1,1), N, size(dtm,2))
+BTRRawData(dtm, docidx_dtm, docidx_vars, y, x::Array{Float64,2}, vocab::Array{String,1}) = BTRRawData(dtm, docidx_dtm, docidx_vars, y, x, length(y), size(dtm,2), vocab::Array{String,1})
+BTRRawData(dtm, docidx_dtm, docidx_vars, y, x, N::Int64, vocab::Array{String,1}) = BTRRawData(dtm, docidx_dtm, docidx_vars, y, x, N, size(dtm,2), vocab::Array{String,1})
+BTRRawData(dtm, docidx_dtm, docidx_vars, y, N::Int64, vocab::Array{String,1}) = BTRRawData(dtm, docidx_dtm, docidx_vars, y, zeros(1,1), N, size(dtm,2), vocab::Array{String,1})
 
 mutable struct BTCRawData
     dtm::SparseMatrixCSC{Int64,Int64}
@@ -31,10 +32,11 @@ mutable struct BTCRawData
     x::Array{Float64,2}
     N::Int64
     V::Int64
+    vocab::Array{String,1}
 end
-BTCRawData(dtm, docidx_dtm, docidx_vars, y, x::Array{Float64,2}) = BTCRawData(dtm, docidx_dtm, docidx_vars, y, x, length(y), size(dtm,2))
-BTCRawData(dtm, docidx_dtm, docidx_vars, y, x, N::Int64) = BTCRawData(dtm, docidx_dtm, docidx_vars, y, x, N, size(dtm,2))
-BTCRawData(dtm, docidx_dtm, docidx_vars, y, N::Int64) = BTCRawData(dtm, docidx_dtm, docidx_vars, y, zeros(1,1), N, size(dtm,2))
+BTCRawData(dtm, docidx_dtm, docidx_vars, y, x::Array{Float64,2}, vocab::Array{String,1}) = BTCRawData(dtm, docidx_dtm, docidx_vars, y, x, length(y), size(dtm,2), vocab::Array{String,1})
+BTCRawData(dtm, docidx_dtm, docidx_vars, y, x, N::Int64, vocab::Array{String,1}) = BTCRawData(dtm, docidx_dtm, docidx_vars, y, x, N, size(dtm,2), vocab::Array{String,1})
+BTCRawData(dtm, docidx_dtm, docidx_vars, y, N::Int64, vocab::Array{String,1}) = BTCRawData(dtm, docidx_dtm, docidx_vars, y, zeros(1,1), N, size(dtm,2), vocab::Array{String,1})
 
 
 
@@ -84,9 +86,10 @@ mutable struct BTRCorpus
     N::Int64
     ntopics::Int64
     V::Int64
+    vocab::Array{String,1}
 end
 BTRCorpus() = BTRCorpus(Vector{BTRParagraphDocument}(undef,0),
-Vector{Topic}(undef,0), Vector{Int64}([]), 0, 0, 0)
+Vector{Topic}(undef,0), Vector{Int64}([]), 0, 0, 0, [""])
 
 mutable struct BTCCorpus
     docs::Vector{BTCParagraphDocument}
@@ -96,9 +99,10 @@ mutable struct BTCCorpus
     ntopics::Int64
     V::Int64
     C::Int64
+    vocab::Array{String,1}
 end
 BTCCorpus() = BTCCorpus(Vector{BTCParagraphDocument}(undef,0),
-Vector{Topic}(undef,0), Vector{Int64}([]), 0, 0, 0, 2)
+Vector{Topic}(undef,0), Vector{Int64}([]), 0, 0, 0, 2, [""])
 
 
 
@@ -171,7 +175,6 @@ end
 @with_kw mutable struct BTRModel
     options::BTROptions = BTROptions();
     crps::DocStructs.BTRCorpus = DocStructs.BTRCorpus();
-    vocab::Vector{String} = Vector{String}(string.(1:crps.V));
     β::Array{Float64,2} = zeros(options.ntopics,crps.V);
     Z_bar::Array{Float64,2} = zeros(options.ntopics,crps.N);
     ω::Array{Float64,1} = options.μ_ω.*ones(options.ntopics+length(options.interactions)*options.ntopics
@@ -182,13 +185,13 @@ end
     ω_post::Array{Float64,2} = options.μ_ω.+ sqrt(options.σ_ω)*randn(length(ω),options.M_iters);
     σ2_post::Array{Float64,1} = zeros(options.E_iters);
     ω_iters::Array{Float64,2} = zeros(length(ω), options.EM_iters+1);
+    pplxy::Float64 = 0.
 end
 
 # Bayesian Topic Classification model
 @with_kw mutable struct BTCModel
     options::BTCOptions = BTCOptions();
     crps::DocStructs.BTCCorpus = DocStructs.BTCCorpus();
-    vocab::Vector{String} = Vector{String}(string.(1:crps.V));
     β::Array{Float64,2} = zeros(options.ntopics,crps.V);
     Z_bar::Array{Float64,2} = zeros(options.ntopics,crps.N);
     ω::Array{Float64,1} = zeros(options.ntopics+length(options.interactions)*options.ntopics
@@ -198,6 +201,7 @@ end
     y::Array{Int64,1} = vcat(getfield.(crps.docs, :y)...);
     ω_iters::Array{Float64,2} = zeros(length(ω), options.EM_iters+1);
     dev::Float64 = 0.;
+    pplxy::Float64 = 0.
 end
 
 # Bayesian Topic Regression predictions
@@ -209,6 +213,7 @@ end
         options.ntopics*length(options.interactions) + length(options.xregs) - length(options.interactions)));
     y_pred::Array{Float64,1} = zeros(crps.N);
     y::Array{Float64,1} = vcat(getfield.(crps.docs, :y)...);
+    pplxy::Float64 = 0.
 end
 
 # Bayesian Topic Classification predictions
@@ -221,6 +226,7 @@ end
     p_pred::Array{Float64,1} = zeros(crps.N);
     y_pred::Array{Int64,1} = zeros(crps.N);
     y::Array{Int64,1} = vcat(getfield.(crps.docs, :y)...);
+    pplxy::Float64 = 0.
 end
 
 

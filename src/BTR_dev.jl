@@ -1,5 +1,5 @@
 using SparseArrays, LinearAlgebra, CSV, KernelDensity, Parameters, GLM
-using Random, Distributions, DataFrames, GLM, StatsBase, JSON
+using Random, Distributions, DataFrames, GLM, StatsBase, JSON, JLD2
 using TextAnalysis, Plots, ProgressMeter, ColorSchemes, Plots.PlotMeasures
 
 
@@ -14,6 +14,7 @@ include("BTR_Mstep.jl")
 include("BTRemGibbs.jl")
 include("BTRpredict.jl")
 include("BTR_visualisation.jl")
+include("BTR_evaluation.jl")
 include("BTRfullGibbs.jl")
 include("BTRfullGibbspredict.jl")
 include("LDAGibbs.jl")

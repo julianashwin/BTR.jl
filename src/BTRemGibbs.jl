@@ -9,7 +9,7 @@ function BTRemGibbs(btrmodel::BTRModel)
     ## Check that everything matches up
     @assert opts.ntopics == btrmodel.crps.ntopics "ntopics in corpus and options must match"
     @assert all(in.(opts.interactions, [opts.xregs])) "Can't have interactions that aren't specified in xreg"
-    @assert btrmodel.crps.V == length(btrmodel.vocab) "Vocab length in BTRModel and V in BTRCorpus do not match"
+    @assert btrmodel.crps.V == length(btrmodel.crps.vocab) "Vocab length in BTRModel and V in BTRCorpus do not match"
     @assert length(btrmodel.ω) == (opts.ntopics + length(opts.interactions)*opts.ntopics +
         (length(opts.xregs) - length(opts.interactions))) "Dimensions of ω do not match with xregs and interactions"
 
@@ -66,6 +66,9 @@ function BTRemGibbs(btrmodel::BTRModel)
         btrmodel = btrmodel_combineobs(btrmodel, E_btrmodel, M_btrmodel,E_obs, M_obs)
     end
 
+    display("Computing in-sample perplexity")
+    btrmodel.pplxy = compute_perplexity(btrmodel.crps, btrmodel.β, opts.α)
+
     return btrmodel
 end
 
@@ -81,7 +84,7 @@ function BTCemGibbs(btcmodel::BTCModel)
     ## Check that everything matches up
     @assert opts.ntopics == btcmodel.crps.ntopics "ntopics in corpus and options must match"
     @assert all(in.(opts.interactions, [opts.xregs])) "Can't have interactions that aren't specified in xreg"
-    @assert btcmodel.crps.V == length(btcmodel.vocab) "Vocab length in BTRModel and V in BTRCorpus do not match"
+    @assert btcmodel.crps.V == length(btcmodel.crps.vocab) "Vocab length in BTRModel and V in BTRCorpus do not match"
     @assert length(btcmodel.ω) == (opts.ntopics + length(opts.interactions)*opts.ntopics +
         (length(opts.xregs) - length(opts.interactions))) "Dimensions of ω do not match with xregs and interactions"
 
@@ -137,6 +140,9 @@ function BTCemGibbs(btcmodel::BTCModel)
     if opts.CVEM == :obs
         btcmodel = btcmodel_combineobs(btcmodel, E_btcmodel, M_btcmodel,E_obs, M_obs)
     end
+
+    display("Computing in-sample perplexity")
+    btcmodel.pplxy = compute_perplexity(btcmodel.crps, btcmodel.β, opts.α)
 
     return btcmodel
 end

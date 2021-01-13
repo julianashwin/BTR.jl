@@ -162,6 +162,7 @@ function BTCEstep(btcmodel::BTCModel)::BTCModel
     ylin_minusd::Float64 = 0.
     ylin_minusp::Float64 = 0.
     ylin_minusn::Float64 = 0.
+    ylin::Float64 = 0.
     β::Array{Float64,2} = zeros(ntopics,V)
     Z_bar::Array{Float64,2} = zeros(ntopics,btcmodel.crps.N)
     ## Set Z_bar and β to zero to be filled with the average across iterations
@@ -206,8 +207,8 @@ function BTCEstep(btcmodel::BTCModel)::BTCModel
                     # Residual for y given all other topic assignments
                     ylin_minusn = ylin_minusp + sum(ω_docspec.*para.topicidcount)./N_d
                     for kk in 1:ntopics
-                        term1 = (para.topicidcount[kk] + α) # prob of topic based on rest of doc
-                        term2 = (get(topics[kk].wordcount, word, 0)+ η) / (topics[kk].count + η * V) # prob of word based on topic
+                        term1::Float64 = (para.topicidcount[kk] + α) # prob of topic based on rest of doc
+                        term2::Float64 = (get(topics[kk].wordcount, word, 0)+ η) / (topics[kk].count + η * V) # prob of word based on topic
 
                         ylin = ylin_minusn + ω_docspec[kk]/N_d
                         if y_dd == 0

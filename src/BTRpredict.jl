@@ -23,7 +23,7 @@ function BTRpredict(btrcrps::DocStructs.BTRCorpus, btrmodel::BTRModel)::BTRPredi
     @assert (size(β,2) == btrcrps.V) "β needs to match with ntopics"
     @assert opts.ntopics == btrcrps.ntopics "ntopics in corpus and options must match"
     @assert all(in.(opts.interactions, [opts.xregs])) "Can't have interactions that aren't specified in xreg"
-    @assert btrmodel.crps.V == length(btrmodel.vocab) "Vocab length in BTRModel and V in BTRCorpus do not match"
+    @assert btrmodel.crps.V == length(btrmodel.crps.vocab) "Vocab length in BTRModel and V in BTRCorpus do not match"
     @assert length(ω) == (opts.ntopics + length(opts.interactions)*opts.ntopics +
         (length(opts.xregs) - length(opts.interactions))) "Dimensions of ω do not match with xregs and interactions"
 
@@ -113,6 +113,12 @@ function BTRpredict(btrcrps::DocStructs.BTRCorpus, btrmodel::BTRModel)::BTRPredi
 
     predictions = BTRPrediction(options = opts, crps = btrcrps, Z_bar = Z_bar, y_pred = y_pred,
         regressors = regressors, y = y)
+
+
+    display("Computing out-of-sample perplexity")
+    predictions.pplxy = compute_perplexity(btrcrps, btrmodel.β, opts.α)
+
+
     return predictions
 
 end
@@ -146,7 +152,7 @@ function BTCpredict(btccrps::DocStructs.BTCCorpus, btcmodel::BTCModel)::BTCPredi
     @assert (size(β,2) == btccrps.V) "β needs to match with ntopics"
     @assert opts.ntopics == btccrps.ntopics "ntopics in corpus and options must match"
     @assert all(in.(opts.interactions, [opts.xregs])) "Can't have interactions that aren't specified in xreg"
-    @assert btcmodel.crps.V == length(btcmodel.vocab) "Vocab length in BTRModel and V in BTRCorpus do not match"
+    @assert btcmodel.crps.V == length(btcmodel.crps.vocab) "Vocab length in BTRModel and V in BTRCorpus do not match"
     @assert length(ω) == (opts.ntopics + length(opts.interactions)*opts.ntopics +
         (length(opts.xregs) - length(opts.interactions))) "Dimensions of ω do not match with xregs and interactions"
 
@@ -241,6 +247,9 @@ function BTCpredict(btccrps::DocStructs.BTCCorpus, btcmodel::BTCModel)::BTCPredi
 
     predictions = BTCPrediction(options = opts, crps = btccrps, Z_bar = Z_bar,
         regressors = regressors, p_pred = p_pred, y_pred = y_pred, y = y)
+
+    display("Computing out-of-sample perplexity")
+    predictions.pplxy = compute_perplexity(btccrps, btcmodel.β, opts.α)
 
     return predictions
 
