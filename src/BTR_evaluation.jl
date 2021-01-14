@@ -51,7 +51,7 @@ function BTR_multipleruns(train_data::DocStructs.BTRRawData, test_data::DocStruc
     opts::BTROptions, nruns::Int64, subdirectory::String, save_jld::Bool = false)
 
     performance_across_runs = DataFrame(run = 1:nruns, mse = repeat([0.], nruns),
-        pplxy = repeat([0.], nruns))
+        pplxy = repeat([0.], nruns), converged = repeat([false], nruns))
 
 
     for nn in 1:nruns
@@ -84,7 +84,7 @@ function BTR_multipleruns(train_data::DocStructs.BTRRawData, test_data::DocStruc
             [Symbol("ZbarX$i") for i in interaction_labels],
             [Symbol("X$i") for i in nointeractions], [:y,:y_pred]))
         # Estimated topics
-        topics_df = DataFrame(hcat(btcmodel.crps.vocab,transpose(btcmodel.β)))
+        topics_df = DataFrame(hcat(btrmodel.crps.vocab,transpose(btrmodel.β)))
         rename!(topics_df, vcat(:term,[Symbol("T$k") for k in 1:opts.ntopics]))
         # Estimation options
         opts_df = DataFrame(ntopics = opts.ntopics, xregs = join(opts.xregs, ", "),
@@ -99,11 +99,13 @@ function BTR_multipleruns(train_data::DocStructs.BTRRawData, test_data::DocStruc
         # Estimation output/performance
         mse_pred = mean((test_data.y .- btr_predicts.y_pred).^2)
         pplxy_pred = btr_predicts.pplxy
-        performance_df = DataFrame(mse = mse_pred, pplxy = pplxy_pred)
+        performance_df = DataFrame(mse = mse_pred, pplxy = pplxy_pred,
+            converged = btrmodel.converged)
 
         # Add performance stats into the summary table
         performance_across_runs[nn,:mse] = mse_pred
         performance_across_runs[nn,:pplxy] = pplxy_pred
+        performance_across_runs[nn,:converged] = btrmodel.converged
 
         ### Save the files in specified subdirectory
         export_dir = join([subdirectory, nn])
@@ -138,7 +140,8 @@ function BTC_multipleruns(train_data::DocStructs.BTCRawData, test_data::DocStruc
     opts::BTCOptions, nruns::Int64, subdirectory::String, save_jld::Bool = false)
 
     performance_across_runs = DataFrame(run = 1:nruns, mse = repeat([0.], nruns),
-        correct = repeat([0.], nruns), pplxy = repeat([0.], nruns))
+        correct = repeat([0.], nruns), pplxy = repeat([0.], nruns),
+        converged = repeat([false], nruns))
 
 
     for nn in 1:nruns
@@ -186,12 +189,13 @@ function BTC_multipleruns(train_data::DocStructs.BTCRawData, test_data::DocStruc
         mse_pred = mean((test_data.y .- btc_predicts.p_pred).^2)
         pplxy_pred = btc_predicts.pplxy
         performance_df = DataFrame(mse = mse_pred, correct_prop = correct_pred,
-            pplxy = pplxy_pred)
+            pplxy = pplxy_pred, converged = btcmodel.converged)
 
         # Add performance stats into the summary table
         performance_across_runs[nn,:mse] = mse_pred
         performance_across_runs[nn,:correct] = correct_pred
         performance_across_runs[nn,:pplxy] = pplxy_pred
+        performance_across_runs[nn,:converged] = btcmodel.converged
 
 
         ### Save the files in specified subdirectory

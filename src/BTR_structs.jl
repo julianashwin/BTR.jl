@@ -185,6 +185,7 @@ end
     ω_post::Array{Float64,2} = options.μ_ω.+ sqrt(options.σ_ω)*randn(length(ω),options.M_iters);
     σ2_post::Array{Float64,1} = zeros(options.E_iters);
     ω_iters::Array{Float64,2} = zeros(length(ω), options.EM_iters+1);
+    converged::Bool = false;
     pplxy::Float64 = 0.
 end
 
@@ -200,6 +201,7 @@ end
     regressors::Array{Float64,2} = zeros(crps.N,length(ω));
     y::Array{Int64,1} = vcat(getfield.(crps.docs, :y)...);
     ω_iters::Array{Float64,2} = zeros(length(ω), options.EM_iters+1);
+    converged::Bool = false;
     dev::Float64 = 0.;
     pplxy::Float64 = 0.
 end

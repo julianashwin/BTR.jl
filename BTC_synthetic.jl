@@ -22,8 +22,8 @@ pkg> dev https://github.com/julianashwin/BTR.jl
 
 """
 
-#using Revise, BTR
-include("src/BTR_dev.jl")
+using Revise, BTR
+#include("src/BTR_dev.jl")
 using TextAnalysis, DataFrames, CSV, Plots, GLM, LinearAlgebra
 using StatsPlots, StatsBase, Plots.PlotMeasures, Distributions, Random
 
@@ -257,7 +257,7 @@ Estimate BTC
 """
 ## Include x regressors by changing the options
 btcopts.xregs = [1,2]
-btcopts.interactions = Array{Int64}([])
+btcopts.interactions = Array{Int64}([2])
 
 ## Initialise BTRModel object
 btcmodel = BTCModel(crps = btccrps_tr, options = btcopts)

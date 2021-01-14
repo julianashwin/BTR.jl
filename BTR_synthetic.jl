@@ -1,24 +1,16 @@
 """
 Implementation of BTR with Gibbs sampling for a toy dataset
 """
-## Set working directory (needs to have the src folder in it)
+## Set working directory
 cd("/Users/julianashwin/Documents/GitHub/BTR.jl/")
 
 
 """
 Load functions and necessary packages
-    You'll need to install the following packages if you don't have them:
-        SparseArrays, LinearAlgebra, Random, Distributions, DataFrames, GLM
-        TextAnalysis, Plots, StatsPlots, ProgressMeter, CSV, KernelDensity,
-        StatsBase, ColorSchemes, Plotly
-    You can do that with Pkg.add("name")
-"""
-
-"""
-To make sure the latest version of the package is used run
-pkg> dev /Users/julianashwin/Documents/GitHub/BTR.jl
-or
-pkg> dev https://github.com/julianashwin/BTR.jl
+    To make sure the latest version of the package is used run
+    pkg> dev /Users/julianashwin/Documents/GitHub/BTR.jl
+    or
+    pkg> dev https://github.com/julianashwin/BTR.jl
 
 """
 
@@ -460,5 +452,4 @@ if save_files; savefig("figures/synth_mse_comparison.pdf"); end;
 
 subdirectory = "data/multipleruns/BTR/run_"
 nruns = 10
-opts = btropts
 BTR_multipleruns(train_data, test_data, btropts, nruns, subdirectory)

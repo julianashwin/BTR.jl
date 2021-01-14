@@ -5,6 +5,7 @@ BTR_EMGibbs plus interaction effects between x variables and topics in the regre
 function BTRemGibbs(btrmodel::BTRModel)
 
     opts = btrmodel.options
+    btrmodel.converged = false # Set convergence to false at the beginning
 
     ## Check that everything matches up
     @assert opts.ntopics == btrmodel.crps.ntopics "ntopics in corpus and options must match"
@@ -58,6 +59,7 @@ function BTRemGibbs(btrmodel::BTRModel)
         end
 
         if maximum(ω_diff) < opts.ω_tol
+            btrmodel.converged = true
             break
         end
     end
@@ -80,6 +82,7 @@ BTC_EMGibbs plus interaction effects between x variables and topics in the regre
 function BTCemGibbs(btcmodel::BTCModel)
 
     opts = btcmodel.options
+    btcmodel.converged = false # Set convergence to false at the beginning
 
     ## Check that everything matches up
     @assert opts.ntopics == btcmodel.crps.ntopics "ntopics in corpus and options must match"
@@ -133,6 +136,7 @@ function BTCemGibbs(btcmodel::BTCModel)
         end
 
         if maximum(ω_diff) < opts.ω_tol
+            btcmodel.converged = true
             break
         end
     end
