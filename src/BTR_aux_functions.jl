@@ -47,12 +47,10 @@ function create_inter_effects(Z::Array{Float64,2},x::Array{Float64,2},ntopics::I
 end
 
 """
-Function that computes group level means for 2d array
+Function that computes group level means for 2d or 1d array
 """
 function group_mean(x::Array{Float64,2},groups::Array{Int64,1})
     @assert size(x,1) == length(groups) "Variable and Group vectors must be same length"
-
-
     group_order = unique(groups)
     x_new = zeros(length(group_order),size(x,2))
     ii=1
@@ -61,7 +59,18 @@ function group_mean(x::Array{Float64,2},groups::Array{Int64,1})
         x_new[ii,:] .= vec(mean(x[idxs,:],dims=1))
         ii+=1
     end
-
+    return x_new
+end
+function group_mean(x::Array{Float64,1},groups::Array{Int64,1})
+    @assert size(x,1) == length(groups) "Variable and Group vectors must be same length"
+    group_order = unique(groups)
+    x_new = zeros(length(group_order))
+    ii=1
+    for gg in group_order
+        idxs = (groups.==gg)
+        x_new[ii,:] .= mean(x[idxs,:])
+        ii+=1
+    end
     return x_new
 end
 
@@ -70,8 +79,6 @@ Function that computes group level sum for 2d array
 """
 function group_sum(x::Array{Float64,2},groups::Array{Int64,1})
     @assert size(x,1) == length(groups) "Variable and Group vectors must be same length"
-
-
     group_order = unique(groups)
     x_new = zeros(length(group_order),size(x,2))
     ii=1
@@ -80,7 +87,6 @@ function group_sum(x::Array{Float64,2},groups::Array{Int64,1})
         x_new[ii,:] .= vec(sum(x[idxs,:],dims=1))
         ii+=1
     end
-
     return x_new
 end
 

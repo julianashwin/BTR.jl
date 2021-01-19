@@ -21,7 +21,7 @@ export DocumentTermMatrix
 # Export pre-processing functions
 export dtmtodfs, gettopics
 export btr_traintestsplit, create_btrcrps, btc_traintestsplit, create_btccrps
-export dtmrowtotext, dtmtotext
+export dtmrowtotext, dtmtotext, convert_to_ids
 # Auxilliary functions
 export multinomial_draw, replace_nan!, create_inter_effects
 export group_mean, group_sum, findfirst_group
@@ -40,7 +40,7 @@ export compute_perplexity, BTR_multipleruns, BTC_multipleruns
 export BTRfullGibbs, BTRfullGibbspredict
 export LDAGibbs
 # Sentiment analysis functions and lists
-export wordlistcounts, LM_dicts, HIV_dicts
+export wordlistcounts, sentimentscore, LM_dicts, HIV_dicts
 
 
 

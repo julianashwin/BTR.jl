@@ -1,6 +1,5 @@
 """
-Implementation of BTR with Gibbs sampling for a toy dataset
-"""
+Implementation of Bayesian Topic Regression on a synthetic dataset"""
 ## Set working directory
 cd("/Users/julianashwin/Documents/GitHub/BTR.jl/")
 
@@ -63,7 +62,7 @@ DP = D*Pd # total number of non-empty paragraphs
 
 heatmap(β_true, title = "", xlabel = "Vocab", ylabel = "Topic", yticks = 1:K,
     left_margin = 3mm,top_margin = 3mm, bottom_margin = 0mm)
-if save_files; plot!(size =(200,300)); savefig("figures/synth_true_beta.pdf"); end;
+if save_files; plot!(size =(200,300)); savefig("figures/synth_BTR/synth_true_beta.pdf"); end;
 
 ## Generate string documents and topic assignments
 docs, Z_true, topic_counts, word_counts = generate_docs(DP, Np, K, θ_true, β_true)
@@ -92,51 +91,28 @@ x1 = (x1.-mean(x1))./std(x1)
 x = Array{Float64,2}(hcat(x1,x2))
 ϵ_true = rand(Normal(0,sqrt(σ_y_true)), N)
 
-## Generate interaction regressors
-#inter_effects = zeros(NP,(K*size(x1,2)))
-#for jj in 1:size(x1,2)
-#    col_range= (jj*K-K+1):(jj*K)
-#    inter_effects[:,col_range] = Z_bar_all.*vec(x[:,jj])
-#end
-
 ## Aggregate interactions to paragraph level
-# Aggregate inter_effects and Z_bar (straight mean is fine as long as all docs have same number of paras)
-#inter_effects = reshape(vec(group_mean(inter_effects, doc_idx)),(N,K))
 Z_bar_all =reshape(vec(group_mean(Z_bar_all, docidx_dtm)),(N,K))
 
-
 ## Generate outcome variable
-#y = Z_bar_all*ω_z_true + inter_effects*ω_zx_true + x2*ω_x_true + ϵ_true
 y = Z_bar_all*ω_z_true + x*ω_x_true + ϵ_true
-# ϵ_true, y, Z_bar_all,inter_effects and the xs that will not be interacted should be the same within groups
 
 """
 Test whether synthetic data gives correct coefficients in OLS regression with true data
 """
-## Just observations with documents
-#regressors = hcat(Z_bar_all[1:D,:], inter_effects[1:D,:],x2[1:D,:])
-regressors = hcat(Z_bar_all[1:D,:], x[1:D,:])
-ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y[1:D])
-#display(ols_coeffs)
-mse_true = mean((y[1:D] .- regressors*ols_coeffs).^2)
-
-regressors = hcat(Z_bar_all[1:D,:])
-ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y[1:D])
-#display(ols_coeffs)
-mse_nox = mean((y[1:D] .- regressors*ols_coeffs).^2)
-
-regressors = hcat(ones(D),x[1:D,:])
-ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y[1:D])
-#display(ols_coeffs)
-mse_noz = mean((y[1:D] .- regressors*ols_coeffs).^2)
-
-
-## All observations
-#regressors = hcat(Z_bar_all, inter_effects,x2)
+## All true variables
 regressors = hcat(Z_bar_all, x)
 ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y)
-#display(ols_coeffs)
-mse_insample = mean((y .- regressors*ols_coeffs).^2)
+mse_true = mean((y .- regressors*ols_coeffs).^2)
+## Just the x variables
+regressors = hcat(Z_bar_all)
+ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y)
+mse_nox = mean((y .- regressors*ols_coeffs).^2)
+## Just the topics
+regressors = hcat(ones(N),x)
+ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y)
+mse_noz = mean((y .- regressors*ols_coeffs).^2)
+
 
 """
 Convert the documents to a Document-Term-Matrix
@@ -165,8 +141,6 @@ list1_score = (list1_counts.-mean(list1_counts))./std(list1_counts)
 @assert list1_score == x1
 
 
-
-
 """
 Split into training and test sets (by doc_idx) and convert to BTRRawData structure
 """
@@ -180,7 +154,7 @@ all_data = DocStructs.BTRRawData(dtm_in, docidx_dtm, docidx_vars, y, x, vocab)
 histogram(train_data.docidx_dtm, bins = 1:N, label = "training set",
     xlab = "Observation", ylab= "Paragraphs", c=1, lc=nothing)
 display(histogram!(test_data.docidx_dtm, bins = 1:N, label = "test set", c=2, lc=nothing))
-if save_files; savefig("figures/synth_trainsplit.pdf"); end;
+if save_files; savefig("figures/synth_BTR/synth_trainsplit.pdf"); end;
 
 
 """
@@ -195,8 +169,8 @@ df = DataFrame(doc_id = docidx_vars,
                Z_bar2 = Z_bar_all[:,2],
                Z_bar3 = Z_bar_all[:,3])
 if save_files
-    dtmtodfs(dtm_sparse.dtm, docidx_dtm, vocab, save_dir = "data")
-    CSV.write("data/synth_data.csv", df)
+    dtmtodfs(dtm_sparse.dtm, docidx_dtm, vocab, save_dir = "data/synth_BTR/")
+    CSV.write("data/synth_BTR/synth_data.csv", df)
 end
 
 
@@ -220,7 +194,7 @@ btropts.b_0 = 0.2 # residual scale: higher is more spread out
 plot(InverseGamma(btropts.a_0, btropts.b_0), xlim = (0,1), title = "Residual variance prior",
     label = "Prior on residual variance")
 display(scatter!([σ_y_true],[0.],label = "True residual variance"))
-if save_files; savefig("figures/synthetic_IGprior.pdf"); end;
+if save_files; savefig("figures/synth_BTR/synthetic_IGprior.pdf"); end;
 
 ## Number of iterations and convergence tolerance
 btropts.E_iters = 100 # E-step iterations (sampling topic assignments, z)
@@ -233,8 +207,6 @@ btropts.ω_tol = 0.005 # Convergence tolerance for regression coefficients ω
 btropts.rel_tol = true # Whether to use a relative convergence criteria rather than just absolute
 
 
-
-
 """
 Convert to BTRCorpus objects
 """
@@ -242,7 +214,6 @@ btrcrps_tr = create_btrcrps(train_data, btropts.ntopics)
 btrcrps_ts = create_btrcrps(test_data, btropts.ntopics)
 # Can also create_btrdocs without the BTRRawData structure with
 #btrdocs_tr, topics_tr, doclabels_tr = create_btrdocs(dtm_in, doc_idx, y, x, ntopics)
-
 
 
 """
@@ -285,7 +256,7 @@ topic_order = synth_reorder_topics(btrmodel.β)
 plt = synth_data_plot(btrmodel.β, btrmodel.ω_post, true_ω = ω_true,
     topic_ord = topic_order, plt_title = "", legend = false,
     left_mar = 3,top_mar = 3, bottom_mar = 0, ticksize = 12, labelsize = 25)
-if save_files; savefig("figures/synth_BTR.pdf"); end;
+if save_files; savefig("figures/synth_BTR/synth_BTR.pdf"); end;
 
 ## Out of sample prediction in test set
 btr_predicts = BTRpredict(btrcrps_ts, btrmodel)
@@ -304,8 +275,10 @@ ldaopts = deepcopy(btropts)
 ldaopts.fullGibbs_iters = 1000
 ldaopts.fullGibbs_thinning = 2
 ldaopts.burnin = 50
-
-ldamodel = BTRModel(crps = btrcrps_tr, options = ldaopts)
+# Initialise model (re-initialise the corpora to start with randomised assignments)
+ldacrps_tr = create_btrcrps(train_data, ldaopts.ntopics)
+ldacrps_ts = create_btrcrps(test_data, ldaopts.ntopics)
+ldamodel = BTRModel(crps = ldacrps_tr, options = ldaopts)
 ## Estimate LDA model on full training set
 ldamodel  = LDAGibbs(ldamodel)
 
@@ -323,11 +296,10 @@ plt = synth_data_plot(ldamodel.β, ldamodel.ω_post, true_ω = ω_z_true,
     left_mar = 3,top_mar = 0, bottom_mar = 0, ticksize = 10, labelsize = 25)
 plot!(size = (300,300))
 plot!(xticklabel = false)
-if save_files; savefig("figures/synth_LDA_LR.pdf"); end;
-
+if save_files; savefig("figures/synth_BTR/synth_LDA_LR.pdf"); end;
 
 ## Out of sample prediction
-lda_predicts = BTRpredict(btrcrps_ts, ldamodel)
+lda_predicts = BTRpredict(ldacrps_ts, ldamodel)
 
 ## Calculate MSE
 mse_lda_blr = mean((lda_predicts.y .- lda_predicts.y_pred).^2)
@@ -342,11 +314,6 @@ blr_ω, blr_σ2, blr_ω_post, blr_σ2_post = BLR_Gibbs(train_data.y, hcat(ones(s
     m_0 = ldaopts.μ_ω, σ_ω = ldaopts.σ_ω, a_0 = ldaopts.a_0, b_0 = ldaopts.b_0)
 # Get the y residualised on x
 resids_blr_train = train_data.y - hcat(ones(size(train_data.x,1)),train_data.x)*blr_ω
-# Create corpus with residual as y
-btrcrps_tr_slda = deepcopy(btrcrps_tr)
-for ii in 1:btrcrps_tr_slda.N
-    btrcrps_tr_slda.docs[ii].y = resids_blr_train[ii]
-end
 
 ## Set options sLDA on residuals
 slda1opts = deepcopy(btropts)
@@ -354,7 +321,12 @@ slda1opts.xregs = []
 slda1opts.interactions = []
 
 ## Initialise BTRModel object
-slda1model = BTRModel(crps = btrcrps_tr_slda, options = slda1opts)
+slda1crps_tr = create_btrcrps(train_data, btropts.ntopics)
+slda1crps_ts = create_btrcrps(test_data, btropts.ntopics)
+for ii in 1:slda1crps_tr.N
+    slda1crps_tr.docs[ii].y = resids_blr_train[ii]
+end
+slda1model = BTRModel(crps = slda1crps_tr, options = slda1opts)
 
 ## Estimate sLDA on residuals
 slda1model = BTRemGibbs(slda1model)
@@ -365,18 +337,17 @@ plt = synth_data_plot(slda1model.β, slda1model.ω_post, true_ω = ω_z_true,
     topic_ord = topic_order, plt_title = "",
     left_mar = 3,top_mar = 0, bottom_mar = 0, ticksize = 10, labelsize = 25)
 plot!(size = (300,300))
-if save_files; savefig("figures/synth_LR_sLDA.pdf"); end;
+if save_files; savefig("figures/synth_BTR/synth_LR_sLDA.pdf"); end;
 
 ## Out of sample prediction
 y_stage1_test = hcat(ones(size(test_data.x,1)),test_data.x)*blr_ω
 resids_test = test_data.y - y_stage1_test
 # Create corpus with residual as y
-btrcrps_ts_slda = deepcopy(btrcrps_ts)
-for ii in 1:btrcrps_ts_slda.N
-    btrcrps_ts_slda.docs[ii].y = resids_test[ii]
+for ii in 1:slda1crps_ts.N
+    slda1crps_ts.docs[ii].y = resids_test[ii]
 end
 
-slda1_predicts = BTRpredict(btrcrps_ts_slda, slda1model)
+slda1_predicts = BTRpredict(slda1crps_ts, slda1model)
 
 mse_blr_slda = mean((slda1_predicts.y .-slda1_predicts.y_pred).^2)
 
@@ -390,7 +361,9 @@ slda2opts.xregs = []
 slda2opts.interactions = []
 
 ## Initialise BTRModel object
-slda2model = BTRModel(crps = btrcrps_tr, options = slda2opts)
+slda2crps_tr = create_btrcrps(train_data, slda2opts.ntopics)
+slda2crps_ts = create_btrcrps(test_data, slda2opts.ntopics)
+slda2model = BTRModel(crps = slda2crps_tr, options = slda2opts)
 
 ## Estimate sLDA on residuals
 slda2model = BTRemGibbs(slda2model)
@@ -402,7 +375,7 @@ plt = synth_data_plot(slda2model.β, slda2model.ω_post, true_ω = ω_z_true,
     topic_ord = topic_order, plt_title = "",
     left_mar = 3,top_mar = 0, bottom_mar = 0, ticksize = 10, labelsize = 25)
 plot!(size = (300,300))
-if save_files; savefig("figures/synth_sLDA_LR.pdf"); end;
+if save_files; savefig("figures/synth_BTR/synth_sLDA_LR.pdf"); end;
 
 ## Identify residuals to train second stage regression
 residuals_slda = train_data.y .- slda2model.regressors*slda2model.ω
@@ -415,7 +388,7 @@ blr_ω, blr_σ2, blr_ω_post, blr_σ2_post = BLR_Gibbs(residuals_slda, regressor
     m_0 = slda2opts.μ_ω, σ_ω = slda2opts.σ_ω, a_0 = slda2opts.a_0, b_0 = slda2opts.b_0)
 
 ## Out of sample
-slda2_predicts = BTRpredict(btrcrps_ts, slda2model)
+slda2_predicts = BTRpredict(slda2crps_ts, slda2model)
 
 # Second stage regressors
 regressors_test = hcat(ones(size(test_data.x,1)),test_data.x)
@@ -447,7 +420,7 @@ plot!(y_pred_slda_blr[plot_range], linestyle = :dot,
 # BlR without documents
 plot!(predict_blr[plot_range], linestyle = :dash,
     label = join(["BLR (", round(mse_blr,digits = 3), ")"]))
-if save_files; savefig("figures/synth_mse_comparison.pdf"); end;
+if save_files; savefig("figures/synth_BTR/synth_mse_comparison.pdf"); end;
 
 
 subdirectory = "data/multipleruns/BTR/run_"

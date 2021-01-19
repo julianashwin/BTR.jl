@@ -357,5 +357,15 @@ end
 
 
 """
+Function to convert an array of strings into integer factors
+"""
+function convert_to_ids(v::Array{String,1})
+    v_cat = CategoricalArray(v)
+    v_int = convert.(Int64,v_cat.refs)
+    return v_int
+end
+
+
+"""
 End of script
 """

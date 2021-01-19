@@ -1,18 +1,8 @@
 """
-Implementation of BTR with Gibbs sampling for a toy dataset
+Implementation of Bayesian Topic Classification on a synthetic dataset
 """
 ## Set working directory (needs to have the src folder in it)
 cd("/Users/julianashwin/Documents/GitHub/BTR.jl/")
-
-
-"""
-Load functions and necessary packages
-    You'll need to install the following packages if you don't have them:
-        SparseArrays, LinearAlgebra, Random, Distributions, DataFrames, GLM
-        TextAnalysis, Plots, StatsPlots, ProgressMeter, CSV, KernelDensity,
-        StatsBase, ColorSchemes, Plotly
-    You can do that with Pkg.add("name")
-"""
 
 """
 To make sure the latest version of the package is used run

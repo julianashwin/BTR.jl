@@ -32,3 +32,27 @@ function wordlistcounts(dtm_sparse::SparseMatrixCSC{Int64,Int64},vocab::Array{St
     word_score::Array{Int64,1} = vec(sum(Array(dtm_sparse[:,list_index]),dims=2))
     return word_score
 end
+
+
+"""
+Function that computes sentiment scores from an array of strings and a specified dictionary
+"""
+function sentimentscore(text::Array{String,1}, dicts::NamedTuple)
+    # Lowercase and convert to StringDocument
+    text = lowercase.(text)
+    docs = StringDocument.(text)
+    # Convert to DTM
+    crps::Corpus{StringDocument{String}} = Corpus(docs)
+    update_lexicon!(crps)
+    dtm_docs::DocumentTermMatrix = DocumentTermMatrix(crps)
+    vocab_docs::Array{String,1} = dtm_docs.terms
+    # Count positive, negative and total no of words
+    negative_counts::Array{Int64,1} = vec(wordlistcounts(dtm_docs.dtm,vocab_docs,dicts.Negative))
+    positive_counts::Array{Int64,1} = vec(wordlistcounts(dtm_docs.dtm,vocab_docs,dicts.Positive))
+    total_counts::Array{Int64,1} = vec(sum(dtm_docs.dtm, dims = 2))
+    # Compute and standardise sentiment_score
+    sentiment_score::Array{Float64,1} = vec((positive_counts .- negative_counts)./(total_counts))
+    sentiment_score = (sentiment_score.-mean(sentiment_score))./std(sentiment_score)
+
+    return sentiment_score
+end
