@@ -35,7 +35,7 @@ export BTRpredict, BTCpredict
 # Visualisation functions
 export coef_plot, BTR_plot, plot_topics, synth_data_plot, synth_reorder_topics
 # Evaluation functions
-export compute_perplexity, BTR_multipleruns, BTC_multipleruns
+export compute_perplexity, BTR_multipleruns, BTC_multipleruns, LDAreg_multipleruns
 # Other models and estimation strategies
 export BTRfullGibbs, BTRfullGibbspredict
 export LDAGibbs

@@ -220,3 +220,99 @@ function BTC_multipleruns(train_data::DocStructs.BTCRawData, test_data::DocStruc
     CSV.write(join([subdirectory, "performance_summary.csv"]), performance_across_runs)
 
 end
+
+
+
+
+
+
+
+"""
+Function for multiple runs at out of sample prediction with Bayesian Topic Classification
+"""
+function LDAreg_multipleruns(train_data::DocStructs.BTRRawData, test_data::DocStructs.BTRRawData,
+    opts::BTROptions, nruns::Int64, subdirectory::String, save_jld::Bool = false)
+
+    performance_across_runs = DataFrame(run = 1:nruns, mse = repeat([0.], nruns),
+        pplxy = repeat([0.], nruns))
+
+
+    for nn in 1:nruns
+        display(join(["Running for the ", nn, "th time"]))
+        # Create the training and test corpora
+        btrcrps_tr = create_btrcrps(train_data, opts.ntopics)
+        btrcrps_ts = create_btrcrps(test_data, opts.ntopics)
+
+        # Train on the training set
+        ldamodel = BTRModel(crps = btrcrps_tr, options = opts)
+        ldamodel = LDAGibbs(ldamodel)
+
+        # Run BLR on topic proportions
+        blr_ω, blr_σ2, blr_ω_post, blr_σ2_post = BLR_Gibbs(ldamodel.y, ldamodel.regressors,
+            m_0 = opts.μ_ω, σ_ω = opts.σ_ω, a_0 = opts.a_0, b_0 = opts.b_0)
+        ldamodel.ω = blr_ω
+        ldamodel.ω_post = blr_ω_post
+
+        # Out of sample prediction
+        lda_predicts = BTRpredict(btrcrps_ts, ldamodel)
+
+        ### Extract the info to be saved
+        # Prediction data
+        data_df = DataFrame(hcat(lda_predicts.regressors, test_data.y,
+            lda_predicts.y_pred))
+        # Define interaction labels
+        nointeractions = setdiff(opts.xregs, opts.interactions)
+        interaction_labels = []
+        for jj in opts.interactions
+            for kk in 1:opts.ntopics
+                push!(interaction_labels, join([string(kk), string(jj)]))
+            end
+        end
+        # Name columns
+        rename!(data_df, vcat([Symbol("Zbar$i") for i in 1:opts.ntopics],
+            [Symbol("ZbarX$i") for i in interaction_labels],
+            [Symbol("X$i") for i in nointeractions], [:y,:y_pred]))
+        # Estimated topics
+        topics_df = DataFrame(hcat(ldamodel.crps.vocab,transpose(ldamodel.β)))
+        rename!(topics_df, vcat(:term,[Symbol("T$k") for k in 1:opts.ntopics]))
+        # Estimation options
+        opts_df = DataFrame(ntopics = opts.ntopics, xregs = join(opts.xregs, ", "),
+            interactions = join(opts.interactions, ", "), E_iters = opts.E_iters,
+            M_iters = opts.M_iters, EM_iters = opts.EM_iters, burnin = opts.burnin,
+            ω_tol = opts.ω_tol, rel_tol = opts.rel_tol, CVEM = opts.CVEM,
+            CVEM_split = opts.CVEM_split, alpha = opts.α, eta = opts.η,
+            mu_omega = opts.μ_ω, sigma_omega = opts.σ_ω, a_0 = opts.a_0, b_0 = opts.b_0)
+
+        coef_df = DataFrame(coef = ["omega$i" for i in 1:length(ldamodel.ω)],
+            est = ldamodel.ω)
+        # Estimation output/performance
+        mse_pred = mean((test_data.y .- lda_predicts.y_pred).^2)
+        pplxy_pred = lda_predicts.pplxy
+        performance_df = DataFrame(mse = mse_pred, pplxy = pplxy_pred)
+
+        # Add performance stats into the summary table
+        performance_across_runs[nn,:mse] = mse_pred
+        performance_across_runs[nn,:pplxy] = pplxy_pred
+
+        ### Save the files in specified subdirectory
+        export_dir = join([subdirectory, nn])
+        if !isdir(export_dir)
+            mkpath(export_dir)
+        end
+        CSV.write(join([export_dir "/data_df.csv"]), data_df)
+        CSV.write(join([export_dir "/topics_df.csv"]), topics_df)
+        CSV.write(join([export_dir "/coef_df.csv"]), coef_df)
+        CSV.write(join([export_dir "/opts_df.csv"]), opts_df)
+        CSV.write(join([export_dir "/performance_df.csv"]), performance_df)
+
+        if save_jld
+            save(join([export_dir "/model.jld2"]), "model", btcmodel)
+            save(join([export_dir "/predictions.jld2"]), "predictions", btc_predicts)
+        end
+
+    end
+
+        # Save the summary performance across all runs
+        CSV.write(join([subdirectory, "performance_summary.csv"]), performance_across_runs)
+
+end

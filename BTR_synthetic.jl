@@ -1,5 +1,6 @@
 """
-Implementation of Bayesian Topic Regression on a synthetic dataset"""
+Implementation of Bayesian Topic Regression on a synthetic dataset
+"""
 ## Set working directory
 cd("/Users/julianashwin/Documents/GitHub/BTR.jl/")
 
@@ -207,13 +208,6 @@ btropts.ω_tol = 0.005 # Convergence tolerance for regression coefficients ω
 btropts.rel_tol = true # Whether to use a relative convergence criteria rather than just absolute
 
 
-"""
-Convert to BTRCorpus objects
-"""
-btrcrps_tr = create_btrcrps(train_data, btropts.ntopics)
-btrcrps_ts = create_btrcrps(test_data, btropts.ntopics)
-# Can also create_btrdocs without the BTRRawData structure with
-#btrdocs_tr, topics_tr, doclabels_tr = create_btrdocs(dtm_in, doc_idx, y, x, ntopics)
 
 
 """
@@ -244,6 +238,8 @@ btropts.xregs = [1,2]
 btropts.interactions = [2]
 
 ## Initialise BTRModel object
+btrcrps_tr = create_btrcrps(train_data, btropts.ntopics)
+btrcrps_ts = create_btrcrps(test_data, btropts.ntopics)
 btrmodel = BTRModel(crps = btrcrps_tr, options = btropts)
 
 ## Estimate BTR with EM-Gibbs algorithm
@@ -426,3 +422,9 @@ if save_files; savefig("figures/synth_BTR/synth_mse_comparison.pdf"); end;
 subdirectory = "data/multipleruns/BTR/run_"
 nruns = 10
 BTR_multipleruns(train_data, test_data, btropts, nruns, subdirectory)
+
+subdirectory = "data/multipleruns/LDA/run_"
+nruns = 10
+LDAreg_multipleruns(train_data, test_data, ldaopts, nruns, subdirectory)
+
+opts=btropts

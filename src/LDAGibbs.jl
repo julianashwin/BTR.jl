@@ -106,12 +106,15 @@ function LDAGibbs(ldamodel::Union{BTRModel,BTCModel})::Union{BTRModel,BTCModel}
 
 
         if it > opts.burnin && it%opts.fullGibbs_thinning ==0
-            ldamodel.β += (β.*(1/opts.E_iters))::Array{Float64,2}
-            ldamodel.Z_bar += (Z_bar.*(1/opts.E_iters))::Array{Float64,2}
+            ldamodel.β += (β.*(1/(opts.fullGibbs_iters/opts.fullGibbs_thinning)))::Array{Float64,2}
+            ldamodel.Z_bar += (Z_bar.*(1/(opts.fullGibbs_iters/opts.fullGibbs_thinning)))::Array{Float64,2}
         end
         next!(prog)
     end ## End of E-step cycle
 
+    # Renormalise θ and β to eliminate any numerical errors
+    ldamodel.Z_bar ./= sum(ldamodel.Z_bar, dims=1)::Array{Float64,2}
+    ldamodel.β ./= sum(ldamodel.β, dims=2)::Array{Float64,2}
 
     # Create the regressors
     Z_bar = Matrix(transpose(ldamodel.Z_bar))
@@ -123,9 +126,7 @@ function LDAGibbs(ldamodel::Union{BTRModel,BTCModel})::Union{BTRModel,BTCModel}
     end
     ldamodel.regressors = hcat(Z_bar, inter_effects, x[:,nointeractions])
 
-    # Renormalise θ and β to eliminate any numerical errors
-    ldamodel.Z_bar ./= sum(ldamodel.Z_bar, dims=1)::Array{Float64,2}
-    ldamodel.β ./= sum(ldamodel.β, dims=2)::Array{Float64,2}
+
 
     display("Computing in-sample perplexity")
     ldamodel.pplxy = compute_perplexity(ldamodel.crps, ldamodel.β, opts.α)

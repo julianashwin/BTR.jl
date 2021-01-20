@@ -1,0 +1,2 @@
+ntopics,xregs,interactions,E_iters,M_iters,EM_iters,burnin,ω_tol,rel_tol,CVEM,CVEM_split,alpha,eta,mu_omega,sigma_omega,a_0,b_0
+3,"1, 2",2,100,2500,10,50,0.005,true,none,0.5,1.0,1.0,0.0,2.0,4.0,0.2
