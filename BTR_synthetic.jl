@@ -446,8 +446,8 @@ blr_coeffs_post, σ2_post = BLR_Gibbs(train_data.y, regressors_train, iteration 
 blr_coeffs = Array{Float64,1}(vec(mean(blr_coeffs_post, dims = 2)))
 
 ## Add residuals to RawData structs
-test_resid = regressors_test*blr_coeffs
-train_resid = regressors_train*blr_coeffs
+train_resid = train_data.y - regressors_train*blr_coeffs
+test_resid = test_data.y - regressors_test*blr_coeffs
 train_data_slda = deepcopy(train_data)
 test_data_slda = deepcopy(test_data)
 train_data_slda.y = train_resid
