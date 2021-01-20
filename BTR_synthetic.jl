@@ -419,12 +419,44 @@ plot!(predict_blr[plot_range], linestyle = :dash,
 if save_files; savefig("figures/synth_BTR/synth_mse_comparison.pdf"); end;
 
 
+"""
+BTR multiple runs
+"""
+## btropts
 subdirectory = "data/multipleruns/BTR/run_"
 nruns = 10
 BTR_multipleruns(train_data, test_data, btropts, nruns, subdirectory)
 
+"""
+LDA + LR multiple runs
+"""
+## Define ldaopts here
 subdirectory = "data/multipleruns/LDA/run_"
 nruns = 10
 LDAreg_multipleruns(train_data, test_data, ldaopts, nruns, subdirectory)
 
-opts=btropts
+"""
+LR + sLDA multiple runs
+"""
+regressors_train = hcat(ones(size(train_data.x,1)),train_data.x)
+regressors_test = hcat(ones(size(test_data.x,1)),test_data.x)
+## Bayesian linear regression
+blr_coeffs_post, σ2_post = BLR_Gibbs(train_data.y, regressors_train, iteration = btropts.M_iters,
+    m_0 = btropts.μ_ω, σ_ω = btropts.σ_ω, a_0 = btropts.a_0, b_0 = btropts.b_0)
+blr_coeffs = Array{Float64,1}(vec(mean(blr_coeffs_post, dims = 2)))
+
+## Add residuals to RawData structs
+test_resid = regressors_test*blr_coeffs
+train_resid = regressors_train*blr_coeffs
+train_data_slda = deepcopy(train_data)
+test_data_slda = deepcopy(test_data)
+train_data_slda.y = train_resid
+test_data_slda.y = test_resid
+
+
+sldaopts = deepcopy(btropts)
+sldaopts.xregs = Array{Int64}([])
+sldaopts.interactions = Array{Int64}([])
+subdirectory = "data/multipleruns/sLDA/run_"
+nruns = 10
+BTR_multipleruns(train_data_slda, test_data_slda, sldaopts, nruns, subdirectory)
