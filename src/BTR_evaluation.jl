@@ -36,7 +36,7 @@ function compute_perplexity(crps::Union{DocStructs.BTRCorpus,DocStructs.BTCCorpu
     end # end doc loop
 
     # Compute combined perplexity
-    pplxy = exp(sum(llk)/N_words)
+    pplxy = exp(-sum(llk)/N_words)
 
     return pplxy
 end
