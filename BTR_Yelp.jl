@@ -21,7 +21,7 @@ using TextAnalysis, DataFrames, CSV, Random, GLM, Distributions
 using Plots, StatsPlots, StatsBase, Plots.PlotMeasures, TableView
 
 ## Load data
-df = CSV.read("data/Yelp_sample.csv", DataFrame, threaded = false)
+df = CSV.read("data/yelp_toronto_sample.csv", DataFrame, threaded = false)
 # Check that the variables look sensible
 display(plot(df.date[1:200], df.stars[1:200], label = ["stars"], legend = :bottomleft,xguidefontsize=8))
 
@@ -74,7 +74,7 @@ Split into training and test sets (by doc_idx) and convert to BTRRawData structu
 ## Extract sparse matrix and create BTRRawData structure(s)
 dtm_in = dtm_sparse.dtm
 train_data, test_data = btr_traintestsplit(dtm_in, docidx_dtm, docidx_vars, y, vocab, x = x,
-    train_split = 0.75, shuffle_obs = true)
+    train_split = 0.75, shuffle_obs = false)
 # Alternatively, can convert the entier set to BTRRawData with
 all_data = DocStructs.BTRRawData(dtm_in, docidx_dtm, docidx_vars, y, x, vocab)
 ## Visualise the training-test split
@@ -84,8 +84,18 @@ histogram!(test_data.docidx_dtm, bins = 1:D, label = "test set", c=2, lc=nothing
 if save_files; savefig("figures/Yelp_BTR/Yelp_trainsplit.pdf"); end;
 
 
-
-
+"""
+Standardise using only the training data
+"""
+## Use mean and std from training data to normalise both sets
+y_mean_tr = mean(train_data.y)
+y_std_tr = std(train_data.y)
+x_mean_tr = mean(train_data.x,dims=1)
+x_std_tr = std(train_data.x,dims=1)
+train_data.y = (train_data.y .- y_mean_tr)./y_std_tr
+train_data.x = (train_data.x .- x_mean_tr)./x_std_tr
+test_data.y = (test_data.y .- y_mean_tr)./y_std_tr
+test_data.x = (test_data.x .- x_mean_tr)./x_std_tr
 
 
 
@@ -95,20 +105,20 @@ Set priors and estimation optioncs here to be consistent across models
 ## Initialiase estimation options
 btropts = BTROptions()
 ## Number of topics
-btropts.ntopics = 8
+btropts.ntopics = 10
 ## LDA priors
-btropts.α=1.
-btropts.η=1.
+btropts.α=0.5
+btropts.η=0.01
 ## BLR priors
 btropts.μ_ω = 0. # coefficient mean
 btropts.σ_ω = 2. # coefficient variance
-btropts.a_0 = 6. # residual shape: higher moves mean closer to zero
-btropts.b_0 = 1. # residual scale: higher is more spread out
+btropts.a_0 = 4. # residual shape: higher moves mean closer to zero
+btropts.b_0 = 2. # residual scale: higher is more spread out
 # Plot the prior distribution for residual variance (in case unfamiliar with InverseGamma distributions)
 # mean will be b_0/(a_0 - 1)
 plot(InverseGamma(btropts.a_0, btropts.b_0), xlim = (0,1), title = "Residual variance prior",
     label = "Prior on residual variance")
-scatter!([var(y)],[0.],label = "Unconditional variance")
+scatter!([var(train_data.y)],[0.],label = "Unconditional variance")
 if save_files; savefig("figures/Yelp_BTR/Yelp_IGprior.pdf"); end;
 
 ## Number of iterations and convergence tolerance
