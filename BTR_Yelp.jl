@@ -26,7 +26,7 @@ df = CSV.read("data/yelp_toronto_sample.csv", DataFrame, threaded = false)
 display(plot(df.date[1:200], df.stars[1:200], label = ["stars"], legend = :bottomleft,xguidefontsize=8))
 
 ## Toggle whether to save the various figures output throughout
-save_files = false
+save_files = true
 
 """
 Generate a sentiment score from unstemmed documents
@@ -34,7 +34,7 @@ Generate a sentiment score from unstemmed documents
 ## Create a sentiment score for each review using the Harvard Inqiurer lists
 df.text = string.(df.text)
 df.sentiment = sentimentscore(df.text, HIV_dicts)
-ols = lm(@formula(stars_av_b ~ stars_av_u+sentiment), df)
+ols = lm(@formula(stars ~ sentiment + stars_av_u + stars_av_b), df)
 display(ols)
 
 
@@ -42,20 +42,19 @@ display(ols)
 Create document ids from either review id or business id
 """
 ## The ids should be in Int64 format
-df.business_id = string.(df.business_id)
-df[!,:doc_idx] = convert_to_ids(df.business_id)
-sort!(df, [:doc_idx])
-showtable(df)
-
-
+df.review_id = string.(df.review_id)
+df.doc_idx = 1:nrow(df)
+#df[!,:doc_idx] = convert_to_ids(df.review_id)
+#sort!(df, [:doc_idx])
+#showtable(df)
 
 
 """
 Prepare data for estimation
 """
 ## Create labels and covariates
-x = group_mean(Array{Float64,2}(hcat(df.sentiment,df.stars_av_u)),df.doc_idx)
-y = group_mean(Array{Float64,1}(df.stars_av_b), df.doc_idx)
+x = group_mean(Array{Float64,2}(hcat(df.sentiment,df.stars_av_u, df.stars_av_b)),df.doc_idx)
+y = group_mean(Array{Float64,1}(df.stars), df.doc_idx)
 docidx_vars = unique(df.doc_idx)
 docidx_dtm = df.doc_idx
 D = length(unique(docidx_dtm))
@@ -125,7 +124,7 @@ if save_files; savefig("figures/Yelp_BTR/Yelp_IGprior.pdf"); end;
 btropts.E_iters = 100 # E-step iterations (sampling topic assignments, z)
 btropts.M_iters = 2500 # M-step iterations (sampling regression coefficients residual variance)
 btropts.EM_iters = 50 # Maximum possible EM iterations (will stop here if no convergence)
-btropts.CVEM = :none # Split for separate E and M step batches (if batch = true)
+btropts.CVEM = :obs # Split for separate E and M step batches (if batch = true)
 btropts.CVEM_split = 0.5 # Split for separate E and M step batches (if batch = true)
 btropts.burnin = 10 # Burnin for Gibbs samplers
 btropts.ω_tol = 0.01 # Convergence tolerance for regression coefficients ω
@@ -162,8 +161,6 @@ btrcrps_tr = create_btrcrps(train_data, btropts.ntopics)
 btrcrps_ts = create_btrcrps(test_data, btropts.ntopics)
 btrmodel = BTRModel(crps = btrcrps_tr, options = btropts)
 ## Estimate BTR with EM-Gibbs algorithm
-btropts.CVEM = :none
-btropts.CVEM_split = 0.5
 btrmodel = BTRemGibbs(btrmodel)
 ## Plot results
 BTR_plot(btrmodel.β, btrmodel.ω_post, btrmodel.crps.vocab,
