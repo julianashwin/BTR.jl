@@ -42,10 +42,11 @@ display(ols)
 Create document ids from either review id or business id
 """
 ## The ids should be in Int64 format
-df.business_id = string.(df.business_id)
-df[!,:doc_idx] = convert_to_ids(df.business_id)
-sort!(df, [:doc_idx])
-showtable(df)
+df.review_id = string.(df.review_id)
+df[!,:doc_idx] = 1:nrow(df)
+#df[!,:doc_idx] = convert_to_ids(df.business_id)
+#sort!(df, [:doc_idx])
+#showtable(df)
 
 
 
