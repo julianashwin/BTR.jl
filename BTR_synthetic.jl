@@ -247,6 +247,18 @@ btropts.CVEM = :none
 btropts.CVEM_split = 0.5
 btrmodel = BTRemGibbs(btrmodel)
 
+
+
+
+
+
+
+
+
+
+
+
+
 ## Plot results
 topic_order = synth_reorder_topics(btrmodel.β)
 plt = synth_data_plot(btrmodel.β, btrmodel.ω_post, true_ω = ω_true,

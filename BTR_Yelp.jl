@@ -34,7 +34,7 @@ Generate a sentiment score from unstemmed documents
 ## Create a sentiment score for each review using the Harvard Inqiurer lists
 df.text = string.(df.text)
 df.sentiment = sentimentscore(df.text, HIV_dicts)
-ols = lm(@formula(stars ~ sentiment + stars_av_u + stars_av_b), df)
+ols = lm(@formula(stars ~ sentiment + stars_av_u), df)
 display(ols)
 
 
@@ -55,7 +55,7 @@ Prepare data for estimation
 ## Create labels and covariates
 x = group_mean(Array{Float64,2}(hcat(df.sentiment,df.stars_av_u, df.stars_av_b)),df.doc_idx)
 y = group_mean(Array{Float64,1}(df.stars), df.doc_idx)
-docidx_vars = unique(df.doc_idx)
+docidx_vars = df.doc_idx
 docidx_dtm = df.doc_idx
 D = length(unique(docidx_dtm))
 
@@ -115,7 +115,7 @@ btropts.a_0 = 4. # residual shape: higher moves mean closer to zero
 btropts.b_0 = 2. # residual scale: higher is more spread out
 # Plot the prior distribution for residual variance (in case unfamiliar with InverseGamma distributions)
 # mean will be b_0/(a_0 - 1)
-plot(InverseGamma(btropts.a_0, btropts.b_0), xlim = (0,1), title = "Residual variance prior",
+plot(InverseGamma(btropts.a_0, btropts.b_0), xlim = (0,2.), title = "Residual variance prior",
     label = "Prior on residual variance")
 scatter!([var(train_data.y)],[0.],label = "Unconditional variance")
 if save_files; savefig("figures/Yelp_BTR/Yelp_IGprior.pdf"); end;
@@ -154,7 +154,7 @@ mse_blr = mean((test_data.y .- predict_blr).^2)
 Estimate BTR
 """
 ## Include x regressors by changing the options
-btropts.xregs = [1,2]
+btropts.xregs = [1,2,3]
 btropts.interactions = Array{Int64,1}([])
 ## Initialise BTRModel object
 btrcrps_tr = create_btrcrps(train_data, btropts.ntopics)
@@ -299,10 +299,24 @@ Multiple runs
 """
 ## Set subdirectory and number of times you want to run
 subdirectory = "/Users/julianashwin/Desktop/BTR_runs/Yelp/run_"
-nruns = 2
+nruns = 20
 ## Run multiple times (for different hyperparameters change btropts)
 BTR_multipleruns(train_data, test_data, btropts, nruns, subdirectory)
 
+
+
+"""
+LDA + LR multiple runs
+"""
+## Define ldaopts here
+ldaopts = deepcopy(btropts)
+ldaopts.fullGibbs_iters = 1000
+ldaopts.fullGibbs_thinning = 2
+ldaopts.burnin = 50
+## run n times
+subdirectory = "/Users/julianashwin/Desktop/BTR_runs/Yelp/LDA/run_"
+nruns = 20
+LDAreg_multipleruns(train_data, test_data, ldaopts, nruns, subdirectory)
 
 
 

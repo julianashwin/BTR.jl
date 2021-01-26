@@ -34,7 +34,7 @@ Generate a sentiment score from unstemmed documents
 ## Create a sentiment score for each review using the Harvard Inqiurer lists
 df.text = string.(df.text)
 df.sentiment = sentimentscore(df.text, HIV_dicts)
-ols = lm(@formula(stars_av_b ~ stars_av_u+sentiment), df)
+ols = lm(@formula(stars ~ sentiment + stars_av_u+ stars_av_b), df)
 display(ols)
 
 
@@ -55,9 +55,9 @@ df[!,:doc_idx] = 1:nrow(df)
 Prepare data for estimation
 """
 ## Create labels and covariates
-x = group_mean(Array{Float64,2}(hcat(df.sentiment,df.stars_av_u)),df.doc_idx)
-y = group_mean(Array{Float64,1}(df.stars_av_b), df.doc_idx)
-docidx_vars = unique(df.doc_idx)
+x = group_mean(Array{Float64,2}(hcat(df.sentiment,df.stars_av_u,df.stars_av_b)),df.doc_idx)
+y = group_mean(Array{Float64,1}(df.stars), df.doc_idx)
+docidx_vars = df.doc_idx
 docidx_dtm = df.doc_idx
 D = length(unique(docidx_dtm))
 
@@ -117,22 +117,22 @@ btropts.a_0 = 4. # residual shape: higher moves mean closer to zero
 btropts.b_0 = 2. # residual scale: higher is more spread out
 # Plot the prior distribution for residual variance (in case unfamiliar with InverseGamma distributions)
 # mean will be b_0/(a_0 - 1)
-plot(InverseGamma(btropts.a_0, btropts.b_0), xlim = (0,1), title = "Residual variance prior",
+plot(InverseGamma(btropts.a_0, btropts.b_0), xlim = (0,2), title = "Residual variance prior",
     label = "Prior on residual variance")
 scatter!([var(train_data.y)],[0.],label = "Unconditional variance")
 if save_files; savefig("figures/Yelp_BTR/Yelp_IGprior.pdf"); end;
 
 ## Number of iterations and convergence tolerance
-btropts.E_iters = 200 # E-step iterations (sampling topic assignments, z)
+btropts.E_iters = 100 # E-step iterations (sampling topic assignments, z)
 btropts.M_iters = 2500 # M-step iterations (sampling regression coefficients residual variance)
-btropts.EM_iters = 50 # Maximum possible EM iterations (will stop here if no convergence)
-btropts.CVEM = :none # Split for separate E and M step batches (if batch = true)
+btropts.EM_iters = 75 # Maximum possible EM iterations (will stop here if no convergence)
+btropts.CVEM = :obs # Split for separate E and M step batches (if batch = true)
 btropts.CVEM_split = 0.5 # Split for separate E and M step batches (if batch = true)
 btropts.burnin = 10 # Burnin for Gibbs samplers
-btropts.ω_tol = 0.01 # Convergence tolerance for regression coefficients ω
+btropts.ω_tol = 0.015 # Convergence tolerance for regression coefficients ω
 btropts.rel_tol = true # Whether to use a relative convergence criteria rather than just absolute
 ## x variables
-btropts.xregs = [1,2]
+btropts.xregs = [1,2,3]
 btropts.interactions = Array{Int64,1}([])
 
 """
@@ -158,7 +158,7 @@ BTR multiple runs
 """
 ## Set subdirectory and number of times you want to run
 subdirectory = "/Users/julianashwin/Desktop/BTR_runs/Yelp/BTR/run_"
-nruns = 25
+nruns = 20
 ## Run multiple times (for different hyperparameters change btropts)
 BTR_multipleruns(train_data, test_data, btropts, nruns, subdirectory)
 

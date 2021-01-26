@@ -46,10 +46,14 @@ function BTRemGibbs(btrmodel::BTRModel)
         # Find coefficient updates
         ω_iters[:,em+1]= M_btrmodel.ω
         ω_diff = abs.(ω_iters[:,em+1] .- ω_iters[:,em])
+        if em >= 8
+            ω_diff = abs.(ω_iters[:,em+1] .- mean(ω_iters[:,(em-4):em],dims=2))
+        end
         ω_diff[ω_diff.<opts.ω_tol] = zeros(sum(ω_diff.<opts.ω_tol))
         if opts.rel_tol
             ω_diff ./=abs.(M_btrmodel.ω)
         end
+
 
         # Plot update on ω if specified
         if opts.plot_ω
@@ -123,6 +127,9 @@ function BTCemGibbs(btcmodel::BTCModel)
         # Find coefficient updates
         ω_iters[:,em+1]= M_btcmodel.ω
         ω_diff = abs.(ω_iters[:,em+1] .- ω_iters[:,em])
+        if em >= 8
+            ω_diff = abs.(ω_iters[:,em+1] .- mean(ω_iters[:,(em-4):em],dims=2))
+        end
         ω_diff[ω_diff.<opts.ω_tol] = zeros(sum(ω_diff.<opts.ω_tol))
         if opts.rel_tol
             ω_diff ./=abs.(M_btcmodel.ω)
