@@ -247,7 +247,7 @@ Estimate BTC
 """
 ## Include x regressors by changing the options
 btcopts.xregs = [1,2]
-btcopts.interactions = Array{Int64}([2])
+btcopts.interactions = Array{Int64}([])
 
 ## Initialise BTRModel object
 btcmodel = BTCModel(crps = btccrps_tr, options = btcopts)

@@ -106,7 +106,7 @@ Set priors and estimation optioncs here to be consistent across models
 ## Initialiase estimation options
 btropts = BTROptions()
 ## Number of topics
-btropts.ntopics = 10
+btropts.ntopics = 20
 ## LDA priors
 btropts.α=0.5
 btropts.η=0.01
@@ -125,7 +125,7 @@ if save_files; savefig("figures/Yelp_BTR/Yelp_IGprior.pdf"); end;
 ## Number of iterations and convergence tolerance
 btropts.E_iters = 100 # E-step iterations (sampling topic assignments, z)
 btropts.M_iters = 2500 # M-step iterations (sampling regression coefficients residual variance)
-btropts.EM_iters = 75 # Maximum possible EM iterations (will stop here if no convergence)
+btropts.EM_iters = 25 # Maximum possible EM iterations (will stop here if no convergence)
 btropts.CVEM = :obs # Split for separate E and M step batches (if batch = true)
 btropts.CVEM_split = 0.5 # Split for separate E and M step batches (if batch = true)
 btropts.burnin = 10 # Burnin for Gibbs samplers
@@ -157,7 +157,7 @@ mse_blr = mean((test_data.y .- predict_blr).^2)
 BTR multiple runs
 """
 ## Set subdirectory and number of times you want to run
-subdirectory = "/Users/julianashwin/Desktop/BTR_runs/Yelp/BTR/run_"
+subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",string(btropts.ntopics),"/BTR/run_"])
 nruns = 20
 ## Run multiple times (for different hyperparameters change btropts)
 BTR_multipleruns(train_data, test_data, btropts, nruns, subdirectory)
@@ -172,8 +172,8 @@ ldaopts.fullGibbs_iters = 1000
 ldaopts.fullGibbs_thinning = 2
 ldaopts.burnin = 50
 ## run n times
-subdirectory = "/Users/julianashwin/Desktop/BTR_runs/Yelp/LDA/run_"
-nruns = 25
+subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",string(btropts.ntopics),"/LDA/run_"])
+nruns = 20
 LDAreg_multipleruns(train_data, test_data, ldaopts, nruns, subdirectory)
 
 
@@ -199,8 +199,8 @@ test_data_slda.y = test_resid
 sldaopts = deepcopy(btropts)
 sldaopts.xregs = Array{Int64}([])
 sldaopts.interactions = Array{Int64}([])
-subdirectory = "data/multipleruns/sLDA/run_"
-nruns = 25
+subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",string(btropts.ntopics),"/sLDA/run_"])
+nruns = 20
 BTR_multipleruns(train_data_slda, test_data_slda, sldaopts, nruns, subdirectory)
 
 
