@@ -36,7 +36,7 @@ df.text = string.(df.text)
 df.sentiment = sentimentscore(df.text, HIV_dicts)
 ols = lm(@formula(stars ~ sentiment + stars_av_u), df)
 display(ols)
-df = CSV.write("data/yelp_toronto_sample.csv",df)
+
 
 """
 Create document ids from either review id or business id
@@ -104,7 +104,7 @@ Set priors and estimation optioncs here to be consistent across models
 ## Initialiase estimation options
 btropts = BTROptions()
 ## Number of topics
-btropts.ntopics = 30
+btropts.ntopics = 100
 ## LDA priors
 btropts.α=0.5
 btropts.η=0.01
@@ -123,7 +123,7 @@ if save_files; savefig("figures/Yelp_BTR/Yelp_IGprior.pdf"); end;
 ## Number of iterations and convergence tolerance
 btropts.E_iters = 100 # E-step iterations (sampling topic assignments, z)
 btropts.M_iters = 2500 # M-step iterations (sampling regression coefficients residual variance)
-btropts.EM_iters = 50 # Maximum possible EM iterations (will stop here if no convergence)
+btropts.EM_iters = 25 # Maximum possible EM iterations (will stop here if no convergence)
 btropts.CVEM = :obs # Split for separate E and M step batches (if batch = true)
 btropts.CVEM_split = 0.5 # Split for separate E and M step batches (if batch = true)
 btropts.burnin = 10 # Burnin for Gibbs samplers
@@ -155,7 +155,7 @@ Estimate BTR
 """
 ## Include x regressors by changing the options
 btropts.xregs = [1,2,3]
-btropts.interactions = [1]
+btropts.interactions = Array{Int64}([])
 ## Initialise BTRModel object
 btrcrps_tr = create_btrcrps(train_data, btropts.ntopics)
 btrcrps_ts = create_btrcrps(test_data, btropts.ntopics)
