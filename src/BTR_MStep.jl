@@ -75,7 +75,6 @@ function BTCMstep(btcmodel::BTCModel)::BTCModel
     btcmodel.Σ = Σ
     btcmodel.regressors = regressors
     btcmodel.y = y
-    btcmodel.dev = dev
 
     return btcmodel
 end

@@ -26,14 +26,14 @@ df = CSV.read("data/yelp_toronto_sample.csv", DataFrame, threaded = false)
 display(plot(df.date[1:200], df.stars[1:200], label = ["stars"], legend = :bottomleft,xguidefontsize=8))
 
 ## Toggle whether to save the various figures output throughout
-save_files = true
+save_files = false
 
 """
 Generate a sentiment score from unstemmed documents
 """
 ## Create a sentiment score for each review using the Harvard Inqiurer lists
-df.text = string.(df.text)
-df.sentiment = sentimentscore(df.text, HIV_dicts)
+#df.text = string.(df.text)
+#df.sentiment = sentimentscore(df.text, HIV_dicts)
 ols = lm(@formula(stars ~ sentiment + stars_av_u), df)
 display(ols)
 
@@ -120,13 +120,16 @@ plot(InverseGamma(btropts.a_0, btropts.b_0), xlim = (0,2.), title = "Residual va
 scatter!([var(train_data.y)],[0.],label = "Unconditional variance")
 if save_files; savefig("figures/Yelp_BTR/Yelp_IGprior.pdf"); end;
 
-## Number of iterations and convergence tolerance
+## Number of iterations and cross validation
 btropts.E_iters = 100 # E-step iterations (sampling topic assignments, z)
 btropts.M_iters = 2500 # M-step iterations (sampling regression coefficients residual variance)
 btropts.EM_iters = 25 # Maximum possible EM iterations (will stop here if no convergence)
+btropts.burnin = 10 # Burnin for Gibbs samplers
 btropts.CVEM = :obs # Split for separate E and M step batches (if batch = true)
 btropts.CVEM_split = 0.5 # Split for separate E and M step batches (if batch = true)
-btropts.burnin = 10 # Burnin for Gibbs samplers
+
+## Comvergence options
+btropts.mse_conv = 1
 btropts.ω_tol = 0.015 # Convergence tolerance for regression coefficients ω
 btropts.rel_tol = true # Whether to use a relative convergence criteria rather than just absolute
 

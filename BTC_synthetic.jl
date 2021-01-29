@@ -25,7 +25,7 @@ Plotting options
 gr()
 #pyplot()
 #plotly()
-save_files = true # Toggle whether you want to save figures and data as files
+save_files = false # Toggle whether you want to save figures and data as files
 
 
 """
@@ -201,26 +201,22 @@ btcopts.ntopics = 3
 btcopts.α=1.
 btcopts.η=1.
 
-## Number of iterations and convergence tolerance
+## Number of iterations cross-validation
 btcopts.E_iters = 50 # E-step iterations (sampling topic assignments, z)
 btcopts.M_iters = 2500 # M-step iterations (sampling regression coefficients residual variance)
 btcopts.EM_iters = 10 # Maximum possible EM iterations (will stop here if no convergence)
+btcopts.burnin = 10 # Burnin for Gibbs samplers
 btcopts.CVEM = :none # Split for separate E and M step batches (if batch = true)
 btcopts.CVEM_split = 0.5 # Split for separate E and M step batches (if batch = true)
-btcopts.burnin = 10 # Burnin for Gibbs samplers
+
+## Convergence
+btcopts.crossent_conv = 1 # Number of previous periods to average over for crossent convergence
 btcopts.ω_tol = 0.005 # Convergence tolerance for regression coefficients ω
 btcopts.rel_tol = true # Whether to use a relative convergence criteria rather than just absolute
 
 
 
 
-"""
-Convert to BTRCorpus objects
-"""
-btccrps_tr = create_btccrps(train_data, btcopts.ntopics)
-btccrps_ts = create_btccrps(test_data, btcopts.ntopics)
-# Can also create_btrdocs without the BTRRawData structure with
-#btrdocs_tr, topics_tr, doclabels_tr = create_btrdocs(dtm_in, doc_idx, y, x, ntopics)
 
 
 
@@ -250,6 +246,8 @@ btcopts.xregs = [1,2]
 btcopts.interactions = Array{Int64}([])
 
 ## Initialise BTRModel object
+btccrps_tr = create_btccrps(train_data, btcopts.ntopics)
+btccrps_ts = create_btccrps(test_data, btcopts.ntopics)
 btcmodel = BTCModel(crps = btccrps_tr, options = btcopts)
 
 ## Estimate BTR with EM-Gibbs algorithm

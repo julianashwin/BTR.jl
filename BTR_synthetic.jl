@@ -197,13 +197,16 @@ plot(InverseGamma(btropts.a_0, btropts.b_0), xlim = (0,1), title = "Residual var
 display(scatter!([σ_y_true],[0.],label = "True residual variance"))
 if save_files; savefig("figures/synth_BTR/synthetic_IGprior.pdf"); end;
 
-## Number of iterations and convergence tolerance
+## Number of iterations cross-validation
 btropts.E_iters = 100 # E-step iterations (sampling topic assignments, z)
 btropts.M_iters = 2500 # M-step iterations (sampling regression coefficients residual variance)
 btropts.EM_iters = 10 # Maximum possible EM iterations (will stop here if no convergence)
+btropts.burnin = 10 # Burnin for Gibbs samplers
 btropts.CVEM = :none # Split for separate E and M step batches (if batch = true)
 btropts.CVEM_split = 0.5 # Split for separate E and M step batches (if batch = true)
-btropts.burnin = 10 # Burnin for Gibbs samplers
+
+## Convergence
+btropts.mse_conv = 1 # Number of previous periods to average over for mse convergence
 btropts.ω_tol = 0.005 # Convergence tolerance for regression coefficients ω
 btropts.rel_tol = true # Whether to use a relative convergence criteria rather than just absolute
 
@@ -243,19 +246,9 @@ btrcrps_ts = create_btrcrps(test_data, btropts.ntopics)
 btrmodel = BTRModel(crps = btrcrps_tr, options = btropts)
 
 ## Estimate BTR with EM-Gibbs algorithm
-btropts.CVEM = :none
+btropts.CVEM = :obs
 btropts.CVEM_split = 0.5
 btrmodel = BTRemGibbs(btrmodel)
-
-
-
-
-
-
-
-
-
-
 
 
 

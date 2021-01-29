@@ -252,6 +252,18 @@ end
 
 
 
+
+"""
+Function to compute cross entropy from vector of integers y and vector of probabilities p
+"""
+function cross_entropy(y::Array{Int64,1}, p ::Array{Float64,1})
+    cross_ents = -(y.*log.(p) .+ (1 .- y).*log.(1 .- p))
+    return mean(cross_ents)
+end
+
+
+
+
 """
 End of script
 """

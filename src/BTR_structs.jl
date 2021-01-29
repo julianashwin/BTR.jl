@@ -130,6 +130,7 @@ Structures for the actual estimation
     fullGibbs_iters::Int64 = 10000;
     fullGibbs_thinning::Int64 = 10;
     burnin::Int64 = 10;
+    mse_conv::Int64 = 0; # compare mse to average of last x observations
     ω_tol::Float64 = 0.01;
     rel_tol::Bool = false;
     CVEM::Symbol = :none; # can also be set to :obs or :paras
@@ -160,6 +161,7 @@ end
     fullGibbs_iters::Int64 = 10000;
     fullGibbs_thinning::Int64 = 10;
     burnin::Int64 = 10;
+    crossent_conv::Int64 = 0; # compare crossent to average of last x observations
     ω_tol::Float64 = 0.01;
     rel_tol::Bool = false;
     CVEM::Symbol = :none; # can also be set to :obs or :paras
@@ -185,8 +187,10 @@ end
     ω_post::Array{Float64,2} = options.μ_ω.+ sqrt(options.σ_ω)*randn(length(ω),options.M_iters);
     σ2_post::Array{Float64,1} = zeros(options.E_iters);
     ω_iters::Array{Float64,2} = zeros(length(ω), options.EM_iters+1);
+    mse_iters::Array{Float64,1} = zeros(options.EM_iters+1);
     converged::Bool = false;
-    pplxy::Float64 = 0.
+    pplxy::Float64 = 0.;
+    mse::Float64 = 0.
 end
 
 # Bayesian Topic Classification model
@@ -201,9 +205,10 @@ end
     regressors::Array{Float64,2} = zeros(crps.N,length(ω));
     y::Array{Int64,1} = vcat(getfield.(crps.docs, :y)...);
     ω_iters::Array{Float64,2} = zeros(length(ω), options.EM_iters+1);
+    crossent_iters::Array{Float64,1} = zeros(options.EM_iters+1);
     converged::Bool = false;
-    dev::Float64 = 0.;
-    pplxy::Float64 = 0.
+    pplxy::Float64 = 0.;
+    crossent::Float64 = 0.
 end
 
 # Bayesian Topic Regression predictions
@@ -215,7 +220,8 @@ end
         options.ntopics*length(options.interactions) + length(options.xregs) - length(options.interactions)));
     y_pred::Array{Float64,1} = zeros(crps.N);
     y::Array{Float64,1} = vcat(getfield.(crps.docs, :y)...);
-    pplxy::Float64 = 0.
+    pplxy::Float64 = 0.;
+    mse::Float64 = 0.
 end
 
 # Bayesian Topic Classification predictions
@@ -228,7 +234,8 @@ end
     p_pred::Array{Float64,1} = zeros(crps.N);
     y_pred::Array{Int64,1} = zeros(crps.N);
     y::Array{Int64,1} = vcat(getfield.(crps.docs, :y)...);
-    pplxy::Float64 = 0.
+    pplxy::Float64 = 0.;
+    crossent::Float64 = 0.;
 end
 
 
