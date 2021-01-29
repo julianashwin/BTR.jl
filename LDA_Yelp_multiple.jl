@@ -153,21 +153,25 @@ predict_blr = regressors_test*blr_coeffs
 mse_blr = mean((test_data.y .- predict_blr).^2)
 
 
+
 """
-BTR multiple runs
+LDA + LR multiple runs
 """
-## Set subdirectory and number of times you want to run
-#subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",string(btropts.ntopics),"/BTR/run_"])
-## Run multiple times (for different hyperparameters change btropts)
+## Define ldaopts here
+ldaopts = deepcopy(btropts)
+ldaopts.fullGibbs_iters = 1000
+ldaopts.fullGibbs_thinning = 2
+ldaopts.burnin = 50
+
 nruns = 20
-for kk in [5,30,50]
+for kk in [5,20,30,50]
     print(join(["\n\n\n",string(kk)," topics\n\n\n"]))
-    btropts.ntopics = kk
+    ldaopts.ntopics = kk
     ## Set subdirectory and number of times you want to run
     subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",
-        string(kk),"/BTR/run_"])
+        string(kk),"/LDA/run_"])
     ## Run multiple times (for different hyperparameters change btropts)
-    BTR_multipleruns(train_data, test_data, btropts, nruns, subdirectory)
+    LDAreg_multipleruns(train_data, test_data, ldaopts, nruns, subdirectory)
 end
 
 

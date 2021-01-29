@@ -35,7 +35,7 @@ Generate a sentiment score from unstemmed documents
 ## Create a sentiment score for each review using the Harvard Inqiurer lists
 df.text = string.(df.text)
 df.sentiment = sentimentscore(df.text, HIV_dicts)
-CSV.write("data/booking_posneg_sample.csv",df)
+
 
 ols = lm(@formula(pos ~ sentiment + Average_Score + Reviewer_Score), df)
 display(ols)
@@ -138,33 +138,16 @@ mse_notext = mean((prediction_notext.- test_data.y).^2)
 
 
 
-"""
-BTC multiple runs
-"""
-## x variables
-# hcat(df.sentiment,df.Average_Score,df.Reviewer_Score)
-btcopts.xregs = [1,3]
-btcopts.interactions = Array{Int64,1}([1])
-nruns = 20
-for kk in [5,10,20,30,50]
-    print(join(["\n\n\n",string(kk)," topics\n\n\n"]))
-    btcopts.ntopics = kk
-    ## Set subdirectory and number of times you want to run
-    subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Booking_posneg/K",
-        string(kk),"/BTC/run_"])
-    ## Run multiple times (for different hyperparameters change btropts)
-    BTC_multipleruns(train_data, test_data, btcopts, nruns, subdirectory)
-end
 
 
 """
-LR + sLDA multiple runs
+sLDA-C multiple runs
 """
 ## Options
 sldaopts = deepcopy(btcopts)
 sldaopts.xregs = Array{Int64}([])
 sldaopts.interactions = Array{Int64}([])
-nruns = 1
+nruns = 20
 for kk in [5,10,20,30,50]
     print(join(["\n\n\n",string(kk)," topics\n\n\n"]))
     sldaopts.ntopics = kk
@@ -174,29 +157,6 @@ for kk in [5,10,20,30,50]
     ## Run multiple times (for different hyperparameters change btropts)
     BTC_multipleruns(train_data, test_data, sldaopts, nruns, subdirectory)
 end
-
-
-"""
-LDA + LR multiple runs
-"""
-## Define ldaopts here
-ldaopts = deepcopy(btropts)
-ldaopts.fullGibbs_iters = 1000
-ldaopts.fullGibbs_thinning = 2
-ldaopts.burnin = 50
-nruns=1
-## run n times
-for kk in [5,10,20,30,50,100]
-    print(join(["\n\n\n",string(kk)," topics\n\n\n"]))
-    sldaopts.ntopics = kk
-    ## Set subdirectory and number of times you want to run
-    subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/YelpBooking/K",
-        string(kk),"/LDA/run_"])
-
-    LDAreg_multipleruns(train_data, test_data, ldaopts, nruns, subdirectory)
-end
-
-
 
 
 

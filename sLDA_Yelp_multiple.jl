@@ -154,20 +154,37 @@ mse_blr = mean((test_data.y .- predict_blr).^2)
 
 
 """
-BTR multiple runs
+LR + sLDA multiple runs
 """
-## Set subdirectory and number of times you want to run
-#subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",string(btropts.ntopics),"/BTR/run_"])
-## Run multiple times (for different hyperparameters change btropts)
+regressors_train = hcat(ones(size(train_data.x,1)),train_data.x)
+regressors_test = hcat(ones(size(test_data.x,1)),test_data.x)
+## Bayesian linear regression
+blr_coeffs_post, σ2_post = BLR_Gibbs(train_data.y, regressors_train, iteration = btropts.M_iters,
+    m_0 = btropts.μ_ω, σ_ω = btropts.σ_ω, a_0 = btropts.a_0, b_0 = btropts.b_0)
+blr_coeffs = Array{Float64,1}(vec(mean(blr_coeffs_post, dims = 2)))
+
+## Add residuals to RawData structs
+train_resid = train_data.y - regressors_train*blr_coeffs
+test_resid = test_data.y - regressors_test*blr_coeffs
+train_data_slda = deepcopy(train_data)
+test_data_slda = deepcopy(test_data)
+train_data_slda.y = train_resid
+test_data_slda.y = test_resid
+## Options
+sldaopts = deepcopy(btropts)
+sldaopts.xregs = Array{Int64}([])
+sldaopts.interactions = Array{Int64}([])
+
+
 nruns = 20
-for kk in [5,30,50]
+for kk in [5,20,30,50]
     print(join(["\n\n\n",string(kk)," topics\n\n\n"]))
-    btropts.ntopics = kk
+    sldaopts.ntopics = kk
     ## Set subdirectory and number of times you want to run
     subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",
-        string(kk),"/BTR/run_"])
+        string(kk),"/sLDA/run_"])
     ## Run multiple times (for different hyperparameters change btropts)
-    BTR_multipleruns(train_data, test_data, btropts, nruns, subdirectory)
+    BTR_multipleruns(train_data, test_data, sldaopts, nruns, subdirectory)
 end
 
 
