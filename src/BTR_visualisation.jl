@@ -291,95 +291,53 @@ end
 # Afternative function if we have an empirical distribution rather than mean and variance
 function synth_data_plot(β::Array{Float64,2}, ω_post::Array{Float64,2};
     true_ω = "no", topic_ord = [1,2,3], plt_title::String = "", legend = false,
-    interactions = Array{Int64,1}([]), top_mar::Int = 0,
-    left_mar::Int = 0, bottom_mar::Int = 0,
-    ticksize::Int = 6, labelsize::Int = 12)
+    ticksize::Int = 6, labelsize::Int = 12, title_size::Int = 12,
+    plot_htmp::Bool = true)
+
     # Extract key info
     n_draws = size(ω_post,2)
     ntopics = size(β,1)
     ncoefs = size(ω_post,1)
+    J = ncoefs - ntopics
     # Re-order β
     β = β[topic_ord,:]
-    ω_post = ω_post[topic_ord,:]
+    ω_post = ω_post[vcat(topic_ord, (ntopics+1):ncoefs),:]
+    # Set maximum and minimum for x axis
     cmin = minimum(ω_post) - 0.25
     cmax = maximum(ω_post) + 0.25
-    if true_ω == "no"
-        coef_true = fill("no", length(ω))
-    else
-        true_ω = true_ω
-        cmin = minimum(vcat(cmin, true_ω .- 0.1))
-        cmax = maximum(vcat(cmax, true_ω .+ 0.1))
-
+    cmin = minimum(vcat(cmin, true_ω .- 0.1))
+    cmax = maximum(vcat(cmax, true_ω .+ 0.1))
+    # Topic heatmap
+    if plot_htmp
+        plt1 = heatmap(β, xlabel = "Vocab", ylabel = "Topic", yticks = 1:ntopics,
+            title= plt_title, legend = legend,
+            xtickfontsize = ticksize,ytickfontsize = ticksize,
+            xguidefontsize = labelsize, yguidefontsize = labelsize)
     end
-    # Define plot layout
-    l = @layout [
-        a{0.5w} [b{0.33h}
-                 c{0.33h}
-                 d{0.33h} ]]
-    # Plot the estimated topics
-    p1 = heatmap(β, xlabel = "Vocab", ylabel = "Topic", yticks = 1:ntopics,
-        title= plt_title, legend = legend, left_margin = Int(left_mar)mm,
-        top_margin = Int(top_mar)mm, bottom_margin = Int(bottom_mar)mm)
-    plot!(xtickfontize = ticksize,ytickfontize = ticksize)
-    plts=[plot(),plot(),plot()]
+    # Coefficient plots
+    yticklabs = vcat([Symbol("Z$i") for i in 1:ntopics],
+        [Symbol("X$i") for i in 1:J])
+    plt2 = plot(ylim = (0,ncoefs+1), xlim = (cmin, cmax), legend = false,
+        xlabel = "Weight", ylabel = "Variable", yticks = (1:ncoefs, yticklabs),
+        xtickfontsize = ticksize,ytickfontsize = ticksize,
+        xguidefontsize = labelsize, yguidefontsize = labelsize)
     # Plot regression coefficient for each topic
-    for kk in 1:ntopics
-        ptemp=plot(legend=false,plot(xlim = (cmin, cmax), yticks=false))
+    for kk in 1:ncoefs
         ω_kk = sort(ω_post[kk,:])
-        lo = ω_kk[Int(round(0.025*n_draws))]
-        hi = ω_kk[Int(round(0.975*n_draws))]
-        mid_lo = ω_kk[Int(round(0.25*n_draws))]
-        mid_hi =  ω_kk[Int(round(0.75*n_draws))]
-        mid = mean(ω_kk)
-        plot!([lo,hi], [kk, kk], color = :dodgerblue)
-        plot!([mid_lo, mid_hi], [kk+0.2, kk+0.2], color = :lightskyblue2,
-        fillrange=[kk-0.2, kk-0.2], fillalpha = 0.5)
-        plot!([mid_lo, mid_hi], [kk-0.2, kk-0.2], color = :lightskyblue2)
-        plot!([mid, mid], [kk-0.4, kk+0.4], color = :blue)
-        plot!([lo, lo], [kk-0.1, kk+0.1], color = :dodgerblue)
-        plot!([hi, hi], [kk-0.1, kk+0.1], color = :dodgerblue)
-        if true_ω != "no"
-            scatter!([true_ω[kk]], [kk], color = :red)
-        end
-        plot!(xtickfontize = ticksize,ytickfontize = ticksize)
-        if kk>1
-            plot!(xticklabel = false)
-        else
-            plot!(xlabel = "Coefficient")
-        end
-
-        # for int in 1:length(interactions)
-        #     coef_range = ntopics+ntopics*int-ntopics+1:ntopics+ntopics*int
-        #     ω_ints = ω_post[coef_range,:]
-        #     ω_int = sort(ω_ints[kk,:])
-        #     lo = ω_int[Int(round(0.025*n_draws))]
-        #     hi = ω_int[Int(round(0.975*n_draws))]
-        #     mid_lo = ω_int[Int(round(0.25*n_draws))]
-        #     mid_hi =  ω_int[Int(round(0.75*n_draws))]
-        #     mid = mean(ω_int)
-        #     plot!([lo,hi], [kk, kk], color = :darkolivegreen1)
-        #     plot!([mid_lo, mid_hi], [kk+0.2, kk+0.2], color = :darkseagreen1,
-        #     fillrange=[kk-0.2, kk-0.2], fillalpha = 0.5)
-        #     plot!([mid_lo, mid_hi], [kk-0.2, kk-0.2], color = :darkseagreen1)
-        #     plot!([mid, mid], [kk-0.4, kk+0.4], color = :olivedrab1)
-        #     plot!([lo, lo], [kk-0.1, kk+0.1], color = :darkolivegreen1)
-        #     plot!([hi, hi], [kk-0.1, kk+0.1], color = :darkolivegreen1)
-        #     if true_ω != "no"
-        #         scatter!([true_ω[coef_range[kk]]], [kk], color = :red)
-        #     end
-        #
-        # end
-        plts[kk]=ptemp
+        plt2
+        coef_plot(ω_kk,kk,scheme = :blue)
+        scatter!([true_ω[kk]], [kk], color = :red)
+    end
+    plot!(title = plt_title, titlefontsize= title_size)
+    # Combine heatmap and coefficient plots
+    if plot_htmp
+        l = @layout [a{0.5w} b{0.5w}]
+        plt = plot(plt1, plt2, layout = l)
+    else
+        plt = plt2
     end
 
-    plt = plot(p1, plts[3], plts[2], plts[1], layout = l)
-    #plt = plot(p1, plot(), plot(), plot(), layout = l)
-    plot!(xtickfontsize=ticksize)
-    plot!(ytickfontsize=ticksize)
-    plot!(xlabelfontsize=labelsize)
-    plot!(ylabelfontsize=labelsize)
     return plt
-
 end
 
 

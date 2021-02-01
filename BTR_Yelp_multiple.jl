@@ -126,10 +126,13 @@ if save_files; savefig("figures/Yelp_BTR/Yelp_IGprior.pdf"); end;
 btropts.E_iters = 100 # E-step iterations (sampling topic assignments, z)
 btropts.M_iters = 2500 # M-step iterations (sampling regression coefficients residual variance)
 btropts.EM_iters = 25 # Maximum possible EM iterations (will stop here if no convergence)
+btropts.burnin = 10 # Burnin for Gibbs samplers
 btropts.CVEM = :obs # Split for separate E and M step batches (if batch = true)
 btropts.CVEM_split = 0.5 # Split for separate E and M step batches (if batch = true)
-btropts.burnin = 10 # Burnin for Gibbs samplers
-btropts.ω_tol = 0.015 # Convergence tolerance for regression coefficients ω
+
+## Convergence
+btropts.mse_conv = 1 # Number of previous periods to average over for mse convergence
+btropts.ω_tol = 0.01 # Convergence tolerance for regression coefficients ω
 btropts.rel_tol = true # Whether to use a relative convergence criteria rather than just absolute
 ## x variables
 btropts.xregs = [1,2,3]
@@ -160,7 +163,7 @@ BTR multiple runs
 #subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",string(btropts.ntopics),"/BTR/run_"])
 ## Run multiple times (for different hyperparameters change btropts)
 nruns = 20
-for kk in [5,30,50]
+for kk in [5,10,20,30]
     print(join(["\n\n\n",string(kk)," topics\n\n\n"]))
     btropts.ntopics = kk
     ## Set subdirectory and number of times you want to run

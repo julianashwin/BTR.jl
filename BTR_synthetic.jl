@@ -27,7 +27,7 @@ Plotting options
 gr()
 #pyplot()
 #plotly()
-save_files = false # Toggle whether you want to save figures and data as files
+save_files = true # Toggle whether you want to save figures and data as files
 
 """
 Generate some synthetic data
@@ -36,17 +36,17 @@ Generate some synthetic data
 ## Size of sample and number of topics
 K = 3 # number of topics
 V = 9 # length of vocabulary (number of unique words)
-D = 5000 # number of documents
-Pd = 4 # number of paragraphs
-Np = 25 # number of words per document
-N = D+10 # total observations (N>=D)
+D = 10000 # number of documents
+Pd = 1 # number of paragraphs
+Np = 50 # number of words per document
+N = D # total observations (N>=D)
 NP = N*Pd # total number of paragraphs
 DP = D*Pd # total number of non-empty paragraphs
 
 ## Parameters of true regression model
-ω_z_true = [-1.,0.,1.] # coefficients on topics
+ω_z_true = [-1.,0.,0.] # coefficients on topics
 #ω_zx_true = [2.,0.,1.] # coefficients on (topic,x) interactions
-ω_x_true = [2., 0.] # coefficients on (topic,x) interactions
+ω_x_true = [1.] # coefficients on (topic,x) interactions
 #ω_true = cat(ω_z_true, ω_zx_true, ω_x_true, dims = 1) # all coefficients
 ω_true = cat(ω_z_true, ω_x_true, dims = 1) # all coefficients
 σ_y_true = 0.05 # residual variance
@@ -63,7 +63,7 @@ DP = D*Pd # total number of non-empty paragraphs
 
 heatmap(β_true, title = "", xlabel = "Vocab", ylabel = "Topic", yticks = 1:K,
     left_margin = 3mm,top_margin = 3mm, bottom_margin = 0mm)
-if save_files; plot!(size =(200,300)); savefig("figures/synth_BTR/synth_true_beta.pdf"); end;
+if save_files; plot!(size =(300,150)); savefig("figures/synth_BTR/synth_true_beta.pdf"); end;
 
 ## Generate string documents and topic assignments
 docs, Z_true, topic_counts, word_counts = generate_docs(DP, Np, K, θ_true, β_true)
@@ -84,12 +84,11 @@ Z_bar_all[1:DP,:] = Z_bar_true
 # Use word counts to define x so that it is correlated with topics
 #x1 = zeros(NP,1)
 x1 = zeros(N,1)
-x2 = randn(N,1)
 #x2 = reshape(repeat(x2, inner = Pd),(NP,1))
 x1[1:D] = group_mean(hcat(Array(Float64.(word_counts[:,1]))), docidx_dtm[1:DP])
-x1 = (x1.-mean(x1))./std(x1)
+x1 = x1./Np
 #x1 = reshape(repeat(vec(group_mean(x1, doc_idx)), inner = Pd),(NP,1))
-x = Array{Float64,2}(hcat(x1,x2))
+x = Array{Float64,2}(hcat(x1))
 ϵ_true = rand(Normal(0,sqrt(σ_y_true)), N)
 
 ## Aggregate interactions to paragraph level
@@ -137,7 +136,7 @@ list1 = ["1","test"]
 ## Get wordcounts
 list1_counts = hcat(Float64.(wordlistcounts(dtm_sparse.dtm,vocab,list1)))
 list1_counts = group_mean(list1_counts, docidx_dtm)
-list1_score = (list1_counts.-mean(list1_counts))./std(list1_counts)
+list1_score = list1_counts./Np
 #list1_score = group_mean(list1_score,doc_idx)
 @assert list1_score == x1
 
@@ -165,14 +164,17 @@ Save the synthetic data to csv files
 df = DataFrame(doc_id = docidx_vars,
                y = y,
                x1 = x[:,1],
-               x2 = x[:,2],
                Z_bar1 = Z_bar_all[:,1],
                Z_bar2 = Z_bar_all[:,2],
                Z_bar3 = Z_bar_all[:,3])
 if save_files
     dtmtodfs(dtm_sparse.dtm, docidx_dtm, vocab, save_dir = "data/synth_BTR/")
+    dtm_dense = Matrix(train_data.dtm)
+    dtm_df = DataFrame(dtm_dense)
+    CSV.write("data/synth_BTR/synth_dtm_dense.csv", dtm_df, header=false)
     CSV.write("data/synth_BTR/synth_data.csv", df)
 end
+
 
 
 """
@@ -237,8 +239,8 @@ mse_blr = mean((test_data.y .- predict_blr).^2)
 Estimate BTR
 """
 ## Include x regressors by changing the options
-btropts.xregs = [1,2]
-btropts.interactions = [2]
+btropts.xregs = [1]
+btropts.interactions = Array{Int64,1}([])
 
 ## Initialise BTRModel object
 btrcrps_tr = create_btrcrps(train_data, btropts.ntopics)
@@ -246,7 +248,7 @@ btrcrps_ts = create_btrcrps(test_data, btropts.ntopics)
 btrmodel = BTRModel(crps = btrcrps_tr, options = btropts)
 
 ## Estimate BTR with EM-Gibbs algorithm
-btropts.CVEM = :obs
+btropts.CVEM = :none
 btropts.CVEM_split = 0.5
 btrmodel = BTRemGibbs(btrmodel)
 
@@ -256,8 +258,10 @@ btrmodel = BTRemGibbs(btrmodel)
 topic_order = synth_reorder_topics(btrmodel.β)
 plt = synth_data_plot(btrmodel.β, btrmodel.ω_post, true_ω = ω_true,
     topic_ord = topic_order, plt_title = "", legend = false,
-    left_mar = 3,top_mar = 3, bottom_mar = 0, ticksize = 12, labelsize = 25)
+    ticksize = 12, labelsize = 12, plot_htmp = false)
+plot!(size = (250,400))
 if save_files; savefig("figures/synth_BTR/synth_BTR.pdf"); end;
+
 
 ## Out of sample prediction in test set
 btr_predicts = BTRpredict(btrcrps_ts, btrmodel)
@@ -292,10 +296,10 @@ ldamodel.ω_post = blr_ω_post
 ## Plot results
 topic_order = synth_reorder_topics(ldamodel.β)
 # Without interactions
-plt = synth_data_plot(ldamodel.β, ldamodel.ω_post, true_ω = ω_z_true,
-    topic_ord = topic_order, plt_title = "",
-    left_mar = 3,top_mar = 0, bottom_mar = 0, ticksize = 10, labelsize = 25)
-plot!(size = (300,300))
+plt = synth_data_plot(ldamodel.β, ldamodel.ω_post, true_ω = ω_true,
+    topic_ord = topic_order, plt_title = "", legend = false,
+    ticksize = 12, labelsize = 12, plot_htmp = false)
+plot!(size = (250,400))
 plot!(xticklabel = false)
 if save_files; savefig("figures/synth_BTR/synth_LDA_LR.pdf"); end;
 
@@ -312,7 +316,7 @@ Estimate 2 stage BLR then supervised LDA (sLDA) on residuals
 """
 ## Residualise first
 blr_ω, blr_σ2, blr_ω_post, blr_σ2_post = BLR_Gibbs(train_data.y, hcat(ones(size(train_data.x,1)),train_data.x),
-    m_0 = ldaopts.μ_ω, σ_ω = ldaopts.σ_ω, a_0 = ldaopts.a_0, b_0 = ldaopts.b_0)
+    m_0 = ldaopts.μ_ω, σ_ω = ldaopts.σ_ω, a_0 = ldaopts.a_0, b_0 = ldaopts.b_0, iteration = btropts.M_iters)
 # Get the y residualised on x
 resids_blr_train = train_data.y - hcat(ones(size(train_data.x,1)),train_data.x)*blr_ω
 
@@ -334,10 +338,12 @@ slda1model = BTRemGibbs(slda1model)
 
 ## Plot results
 topic_order = synth_reorder_topics(slda1model.β)
-plt = synth_data_plot(slda1model.β, slda1model.ω_post, true_ω = ω_z_true,
-    topic_ord = topic_order, plt_title = "",
-    left_mar = 3,top_mar = 0, bottom_mar = 0, ticksize = 10, labelsize = 25)
-plot!(size = (300,300))
+slda1model.ω_post = vcat(slda1model.ω_post, transpose(blr_ω_post[2,:]))
+
+plt = synth_data_plot(slda1model.β, slda1model.ω_post, true_ω = ω_true,
+    topic_ord = topic_order, plt_title = "", legend = false,
+    ticksize = 12, labelsize = 12, plot_htmp = false)
+plot!(size = (250,400))
 if save_files; savefig("figures/synth_BTR/synth_LR_sLDA.pdf"); end;
 
 ## Out of sample prediction
@@ -369,15 +375,6 @@ slda2model = BTRModel(crps = slda2crps_tr, options = slda2opts)
 ## Estimate sLDA on residuals
 slda2model = BTRemGibbs(slda2model)
 
-## Plot results
-topic_order = synth_reorder_topics(slda2model.β)
-# Without interactions
-plt = synth_data_plot(slda2model.β, slda2model.ω_post, true_ω = ω_z_true,
-    topic_ord = topic_order, plt_title = "",
-    left_mar = 3,top_mar = 0, bottom_mar = 0, ticksize = 10, labelsize = 25)
-plot!(size = (300,300))
-if save_files; savefig("figures/synth_BTR/synth_sLDA_LR.pdf"); end;
-
 ## Identify residuals to train second stage regression
 residuals_slda = train_data.y .- slda2model.regressors*slda2model.ω
 
@@ -386,7 +383,22 @@ residuals_slda = train_data.y .- slda2model.regressors*slda2model.ω
 regressors_slda = hcat(ones(size(train_data.x,1)),train_data.x)
 # No fixed effect, no batch
 blr_ω, blr_σ2, blr_ω_post, blr_σ2_post = BLR_Gibbs(residuals_slda, regressors_slda,
-    m_0 = slda2opts.μ_ω, σ_ω = slda2opts.σ_ω, a_0 = slda2opts.a_0, b_0 = slda2opts.b_0)
+    m_0 = slda2opts.μ_ω, σ_ω = slda2opts.σ_ω, a_0 = slda2opts.a_0, b_0 = slda2opts.b_0,
+    iteration = btropts.M_iters)
+
+# Add second-stage coefficients to ω_post
+slda2model.ω_post = vcat(slda2model.ω_post, transpose(blr_ω_post[2,:]))
+
+
+## Plot results
+topic_order = synth_reorder_topics(slda2model.β)
+plt = synth_data_plot(slda2model.β, slda2model.ω_post, true_ω = ω_true,
+    topic_ord = topic_order, plt_title = "", legend = false,
+    ticksize = 12, labelsize = 12, plot_htmp = false)
+plot!(size = (250,400))
+if save_files; savefig("figures/synth_BTR/synth_sLDA_LR.pdf"); end;
+
+
 
 ## Out of sample
 slda2_predicts = BTRpredict(slda2crps_ts, slda2model)
