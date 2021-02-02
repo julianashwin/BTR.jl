@@ -21,7 +21,7 @@ export DocumentTermMatrix
 # Export pre-processing functions
 export dtmtodfs, gettopics
 export btr_traintestsplit, create_btrcrps, btc_traintestsplit, create_btccrps
-export dtmrowtotext, dtmtotext, convert_to_ids
+export dtmrowtotext, dtmtotext, convert_to_ids, dtm_as_string
 # Auxilliary functions
 export multinomial_draw, replace_nan!, create_inter_effects
 export group_mean, group_sum, findfirst_group

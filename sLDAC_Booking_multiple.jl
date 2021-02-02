@@ -114,9 +114,11 @@ btcopts.η=0.01
 btcopts.E_iters = 100 # E-step iterations (sampling topic assignments, z)
 btcopts.M_iters = 2500 # M-step iterations (sampling regression coefficients residual variance)
 btcopts.EM_iters = 25 # Maximum possible EM iterations (will stop here if no convergence)
+btcopts.burnin = 10 # Burnin for Gibbs samplers
 btcopts.CVEM = :obs # Split for separate E and M step batches (if batch = true)
 btcopts.CVEM_split = 0.5 # Split for separate E and M step batches (if batch = true)
-btcopts.burnin = 10 # Burnin for Gibbs samplers
+## Convergence tolerance
+btcopts.crossent_conv = 1
 btcopts.ω_tol = 0.015 # Convergence tolerance for regression coefficients ω
 btcopts.rel_tol = true # Whether to use a relative convergence criteria rather than just absolute
 
@@ -148,7 +150,7 @@ sldaopts = deepcopy(btcopts)
 sldaopts.xregs = Array{Int64}([])
 sldaopts.interactions = Array{Int64}([])
 nruns = 20
-for kk in [5,10,20,30,50]
+for kk in [5,10,20,30,50,100]
     print(join(["\n\n\n",string(kk)," topics\n\n\n"]))
     sldaopts.ntopics = kk
     ## Set subdirectory and number of times you want to run

@@ -292,8 +292,7 @@ end
 function synth_data_plot(β::Array{Float64,2}, ω_post::Array{Float64,2};
     true_ω = "no", topic_ord = [1,2,3], plt_title::String = "", legend = false,
     ticksize::Int = 6, labelsize::Int = 12, title_size::Int = 12,
-    plot_htmp::Bool = true)
-
+    plot_htmp::Bool = true, xlim::Tuple{Float64,Float64} = (0.,0.))
     # Extract key info
     n_draws = size(ω_post,2)
     ntopics = size(β,1)
@@ -321,6 +320,9 @@ function synth_data_plot(β::Array{Float64,2}, ω_post::Array{Float64,2};
         xlabel = "Weight", ylabel = "Variable", yticks = (1:ncoefs, yticklabs),
         xtickfontsize = ticksize,ytickfontsize = ticksize,
         xguidefontsize = labelsize, yguidefontsize = labelsize)
+    if xlim !=(0.,0.)
+        plot!(xlim = xlim)
+    end
     # Plot regression coefficient for each topic
     for kk in 1:ncoefs
         ω_kk = sort(ω_post[kk,:])

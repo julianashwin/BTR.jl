@@ -257,8 +257,8 @@ btrmodel = BTRemGibbs(btrmodel)
 ## Plot results
 topic_order = synth_reorder_topics(btrmodel.β)
 plt = synth_data_plot(btrmodel.β, btrmodel.ω_post, true_ω = ω_true,
-    topic_ord = topic_order, plt_title = "", legend = false,
-    ticksize = 12, labelsize = 12, plot_htmp = false)
+    topic_ord = topic_order, plt_title = "BTR", legend = false,
+    ticksize = 8, labelsize = 12, plot_htmp = false, xlim = (-1.75, 1.5))
 plot!(size = (250,400))
 if save_files; savefig("figures/synth_BTR/synth_BTR.pdf"); end;
 
@@ -297,8 +297,8 @@ ldamodel.ω_post = blr_ω_post
 topic_order = synth_reorder_topics(ldamodel.β)
 # Without interactions
 plt = synth_data_plot(ldamodel.β, ldamodel.ω_post, true_ω = ω_true,
-    topic_ord = topic_order, plt_title = "", legend = false,
-    ticksize = 12, labelsize = 12, plot_htmp = false)
+    topic_ord = topic_order, plt_title = "LDA", legend = false,
+    ticksize = 8, labelsize = 12, plot_htmp = false, xlim = (-1.75, 1.5))
 plot!(size = (250,400))
 plot!(xticklabel = false)
 if save_files; savefig("figures/synth_BTR/synth_LDA_LR.pdf"); end;
@@ -341,8 +341,8 @@ topic_order = synth_reorder_topics(slda1model.β)
 slda1model.ω_post = vcat(slda1model.ω_post, transpose(blr_ω_post[2,:]))
 
 plt = synth_data_plot(slda1model.β, slda1model.ω_post, true_ω = ω_true,
-    topic_ord = topic_order, plt_title = "", legend = false,
-    ticksize = 12, labelsize = 12, plot_htmp = false)
+    topic_ord = topic_order, plt_title = "LR-sLDA", legend = false,
+    ticksize = 8, labelsize = 12, plot_htmp = false, xlim = (-1.75, 1.5))
 plot!(size = (250,400))
 if save_files; savefig("figures/synth_BTR/synth_LR_sLDA.pdf"); end;
 
@@ -357,6 +357,55 @@ end
 slda1_predicts = BTRpredict(slda1crps_ts, slda1model)
 
 mse_blr_slda = mean((slda1_predicts.y .-slda1_predicts.y_pred).^2)
+
+
+
+"""
+Export for BP-sLDA
+"""
+
+using SparseArrays
+
+
+## Training set
+dtm_string_tr = dtm_as_string(train_data.dtm)
+io = open("data/synth_BTR/train_feature", "w")
+println(io, dtm_string_tr)
+close(io)
+label_string_tr = join.([string.(resids_blr_train)], "\n")[1]
+io = open("data/synth_BTR/train_res_label", "w")
+println(io, label_string_tr)
+close(io)
+
+## Test set
+dtm_string_ts = dtm_as_string(test_data.dtm)
+io = open("data/synth_BTR/test_feature", "w")
+println(io, dtm_string_ts)
+close(io)
+label_string_ts = join.([string.(resids_test)], "\n")[1]
+io = open("data/synth_BTR/test_res_label", "w")
+println(io, label_string_ts)
+close(io)
+
+β_bpslda = [0.09187371	0.07547545	0.1166737	0.1380197	0.1064429	0.1151681	0.1281253	0.1318677	0.09635347;
+0.06106331	0.1666941	0.1443381	0.1024441	0.1156826	0.1231467	0.1043891	0.09864319	0.0835988;
+0.1364629	0.102705	0.09783218	0.1094643	0.1114662	0.1289394	0.1117134	0.1083724	0.09304412]
+
+ω_slda = [0.04182209; -0.2424962; 0.133278]
+ω_slda_post = hcat(repeat([ω_slda], slda1opts.M_iters)...)
+
+topic_order = synth_reorder_topics(β_bpslda)
+topic_order[3] = 2
+ω_slda_post = vcat(ω_slda_post, transpose(blr_ω_post[2,:]))
+
+plt = synth_data_plot(β_bpslda, ω_slda_post, true_ω = ω_true,
+    topic_ord = topic_order, plt_title = "LD-BPsLDA", legend = false,
+    ticksize = 8, labelsize = 12, plot_htmp = false, xlim = (-1.75, 1.5))
+plot!(size = (250,400))
+if save_files; savefig("figures/synth_BTR/synth_LR_BPsLDA.pdf"); end;
+
+
+
 
 
 """
@@ -393,22 +442,58 @@ slda2model.ω_post = vcat(slda2model.ω_post, transpose(blr_ω_post[2,:]))
 ## Plot results
 topic_order = synth_reorder_topics(slda2model.β)
 plt = synth_data_plot(slda2model.β, slda2model.ω_post, true_ω = ω_true,
-    topic_ord = topic_order, plt_title = "", legend = false,
-    ticksize = 12, labelsize = 12, plot_htmp = false)
+    topic_ord = topic_order, plt_title = "sLDA-LR", legend = false,
+    ticksize = 8, labelsize = 12, plot_htmp = false, xlim = (-1.75, 1.5))
 plot!(size = (250,400))
 if save_files; savefig("figures/synth_BTR/synth_sLDA_LR.pdf"); end;
 
-
-
 ## Out of sample
 slda2_predicts = BTRpredict(slda2crps_ts, slda2model)
-
 # Second stage regressors
 regressors_test = hcat(ones(size(test_data.x,1)),test_data.x)
 # Add y prediction from slda to portion of residual explained by BLR
 y_pred_slda_blr = slda2_predicts.y_pred + regressors_test*blr_ω
 # Compute MSE
 mse_slda_blr = mean((test_data.y .- y_pred_slda_blr).^2)
+
+
+"""
+Export for BP-sLDA
+"""
+
+label_string_tr = join.([string.(train_data.y)], "\n")[1]
+io = open("data/synth_BTR/train_label", "w")
+println(io, label_string_tr)
+close(io)
+label_string_ts = join.([string.(test_data.y)], "\n")[1]
+io = open("data/synth_BTR/test_label", "w")
+println(io, label_string_ts)
+close(io)
+
+bpslda2_β = [0.07601578	0.2480879	0.2152727	0.0699848	0.09354996	0.05801166	0.04922866	0.1062157	0.08363285;
+0.1443283	0.1135954	0.09761772	0.08624685	0.1338423	0.108062	0.08499394	0.1098455	0.121468;
+0.1354368	0.07065896	0.03416036	0.1187447	0.1289439	0.109597	0.1562158	0.1184903	0.1277523;]
+
+bpslda2_ω = [-0.5601575; -0.1984575; -0.04689296]
+
+ω_bpslda2_post = hcat(repeat([bpslda2_ω], slda1opts.M_iters)...)
+
+
+residuals_bpslda = train_data.y .- slda2model.regressors*bpslda2_ω
+
+blr_ω, blr_σ2, blr_ω_post, blr_σ2_post = BLR_Gibbs(residuals_bpslda, train_data.x,
+    m_0 = slda2opts.μ_ω, σ_ω = slda2opts.σ_ω, a_0 = slda2opts.a_0, b_0 = slda2opts.b_0,
+    iteration = btropts.M_iters)
+
+topic_order = synth_reorder_topics(bpslda2_β)
+ω_bpslda2_post = vcat(ω_bpslda2_post, transpose(blr_ω_post[1,:]))
+
+topic_order = [1,2,3]
+plt = synth_data_plot(bpslda2_β, ω_bpslda2_post, true_ω = ω_true,
+    topic_ord = topic_order, plt_title = "BPsLDA-LR", legend = false,
+    ticksize = 8, labelsize = 12, plot_htmp = false, xlim = (-1.75, 1.5))
+plot!(size = (250,400))
+if save_files; savefig("figures/synth_BTR/synth_BPsLDA_LR.pdf"); end;
 
 
 

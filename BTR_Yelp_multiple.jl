@@ -94,9 +94,9 @@ y_std_tr = std(train_data.y)
 x_mean_tr = mean(train_data.x,dims=1)
 x_std_tr = std(train_data.x,dims=1)
 train_data.y = (train_data.y .- y_mean_tr)#./y_std_tr
-train_data.x = (train_data.x .- x_mean_tr)#./x_std_tr
+train_data.x = (train_data.x .- x_mean_tr)./x_std_tr
 test_data.y = (test_data.y .- y_mean_tr)#./y_std_tr
-test_data.x = (test_data.x .- x_mean_tr)#./x_std_tr
+test_data.x = (test_data.x .- x_mean_tr)./x_std_tr
 
 
 

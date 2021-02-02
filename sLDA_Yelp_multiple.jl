@@ -94,9 +94,9 @@ y_std_tr = std(train_data.y)
 x_mean_tr = mean(train_data.x,dims=1)
 x_std_tr = std(train_data.x,dims=1)
 train_data.y = (train_data.y .- y_mean_tr)#./y_std_tr
-train_data.x = (train_data.x .- x_mean_tr)#./x_std_tr
+train_data.x = (train_data.x .- x_mean_tr)./x_std_tr
 test_data.y = (test_data.y .- y_mean_tr)#./y_std_tr
-test_data.x = (test_data.x .- x_mean_tr)#./x_std_tr
+test_data.x = (test_data.x .- x_mean_tr)./x_std_tr
 
 
 
@@ -129,6 +129,8 @@ btropts.EM_iters = 25 # Maximum possible EM iterations (will stop here if no con
 btropts.CVEM = :obs # Split for separate E and M step batches (if batch = true)
 btropts.CVEM_split = 0.5 # Split for separate E and M step batches (if batch = true)
 btropts.burnin = 10 # Burnin for Gibbs samplers
+
+btropts.mse_conv = 1 # Number of previous periods to average over for mse convergence
 btropts.ω_tol = 0.015 # Convergence tolerance for regression coefficients ω
 btropts.rel_tol = true # Whether to use a relative convergence criteria rather than just absolute
 ## x variables

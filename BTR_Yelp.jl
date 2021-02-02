@@ -104,10 +104,10 @@ Set priors and estimation optioncs here to be consistent across models
 ## Initialiase estimation options
 btropts = BTROptions()
 ## Number of topics
-btropts.ntopics = 100
+btropts.ntopics = 20
 ## LDA priors
 btropts.α=0.5
-btropts.η=0.01
+btropts.η=1.
 ## BLR priors
 btropts.μ_ω = 0. # coefficient mean
 btropts.σ_ω = 2. # coefficient variance

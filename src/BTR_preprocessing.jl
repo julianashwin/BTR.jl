@@ -356,6 +356,30 @@ function dtmtotext(dtm_in::SparseMatrixCSC{Int64,Int64}, vocab::Array{String,1})
 end
 
 
+
+"""
+Function to convert sparse DTM to string for BP-sLDA code
+"""
+function dtm_as_string(dtm_in::SparseArrays.SparseMatrixCSC{Int64,Int64})
+    D = size(dtm_in,1)
+    dtm_string = repeat([""], D)
+    for ii in 1:D
+        doc_string = dtm_string[ii]
+        doc = dtm_in[ii,:]
+        for vv in 1:length(doc)
+            if doc[vv] > 0
+                doc_string = join([doc_string, join([string(vv-1),":",string(doc[vv]), "\t"])])
+            end
+        end
+        doc_string = chop(doc_string, head = 0, tail = 1)
+        doc_string = join([doc_string, "\n"])
+        dtm_string[ii] = doc_string
+    end
+    dtm_out = join(dtm_string)
+    dtm_out = chop(dtm_out, head= 0 , tail = 1)
+    return dtm_out
+end
+
 """
 Function to convert an array of strings into integer factors
 """
