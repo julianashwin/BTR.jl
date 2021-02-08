@@ -73,6 +73,13 @@ dtm_sparse = DocumentTermMatrix(crps)
 vocab = dtm_sparse.terms
 
 
+vocab_df= DataFrame(term = dtm_sparse.terms, id = 1:size(dtm_sparse.dtm,2))
+dtm_dense = dtm(dtm_sparse,:dense)
+CSV.write("data/booking_class_vocab.csv", vocab_df)
+dtm_df = DataFrame(dtm_dense)
+CSV.write("data/booking_class_dtm.csv", dtm_df, header=false)
+
+
 """
 Split into training and test sets (by doc_idx) and convert to BTRRawData structure
 """

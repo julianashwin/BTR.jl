@@ -104,10 +104,10 @@ Set priors and estimation optioncs here to be consistent across models
 ## Initialiase estimation options
 btropts = BTROptions()
 ## Number of topics
-btropts.ntopics = 20
+btropts.ntopics = 50
 ## LDA priors
 btropts.α=0.5
-btropts.η=1.
+btropts.η=0.1
 ## BLR priors
 btropts.μ_ω = 0. # coefficient mean
 btropts.σ_ω = 2. # coefficient variance
@@ -158,7 +158,7 @@ Estimate BTR
 """
 ## Include x regressors by changing the options
 btropts.xregs = [1,2,3]
-btropts.interactions = Array{Int64}([])
+btropts.interactions = Array{Int64}([1])
 ## Initialise BTRModel object
 btrcrps_tr = create_btrcrps(train_data, btropts.ntopics)
 btrcrps_ts = create_btrcrps(test_data, btropts.ntopics)
@@ -175,6 +175,8 @@ btr_predicts = BTRpredict(btrcrps_ts, btrmodel)
 #btr_predicts.crps.topics = gettopics(btrcrps_ts.docs)
 mse_btr = mean((btr_predicts.y .- btr_predicts.y_pred).^2)
 pplxy_btr = btr_predicts.pplxy
+
+
 
 """
 Estimate 2 stage LDA then Bayesian Linear Regression (BLR)

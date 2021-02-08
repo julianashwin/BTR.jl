@@ -178,15 +178,15 @@ sldaopts.xregs = Array{Int64}([])
 sldaopts.interactions = Array{Int64}([])
 
 
-nruns = 20
-for kk in [5,20,30,50]
+nruns = 4
+for kk in [100]
     print(join(["\n\n\n",string(kk)," topics\n\n\n"]))
     sldaopts.ntopics = kk
     ## Set subdirectory and number of times you want to run
     subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",
         string(kk),"/sLDA/run_"])
     ## Run multiple times (for different hyperparameters change btropts)
-    BTR_multipleruns(train_data, test_data, sldaopts, nruns, subdirectory)
+    BTR_multipleruns(train_data_slda, test_data_slda, sldaopts, nruns, subdirectory)
 end
 
 

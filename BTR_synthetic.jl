@@ -63,7 +63,7 @@ DP = D*Pd # total number of non-empty paragraphs
 
 heatmap(β_true, title = "", xlabel = "Vocab", ylabel = "Topic", yticks = 1:K,
     left_margin = 3mm,top_margin = 3mm, bottom_margin = 0mm)
-if save_files; plot!(size =(300,150)); savefig("figures/synth_BTR/synth_true_beta.pdf"); end;
+if save_files; plot!(size =(300,150)); savefig("figures/synth_BTR/synth_true_beta.png"); end;
 
 ## Generate string documents and topic assignments
 docs, Z_true, topic_counts, word_counts = generate_docs(DP, Np, K, θ_true, β_true)
@@ -257,9 +257,9 @@ btrmodel = BTRemGibbs(btrmodel)
 ## Plot results
 topic_order = synth_reorder_topics(btrmodel.β)
 plt = synth_data_plot(btrmodel.β, btrmodel.ω_post, true_ω = ω_true,
-    topic_ord = topic_order, plt_title = "BTR", legend = false,
+    topic_ord = topic_order, plt_title = "MBTR", legend = false,
     ticksize = 8, labelsize = 12, plot_htmp = false, xlim = (-1.75, 1.5))
-plot!(size = (250,400))
+plot!(size = (250,250))
 if save_files; savefig("figures/synth_BTR/synth_BTR.pdf"); end;
 
 
@@ -299,7 +299,7 @@ topic_order = synth_reorder_topics(ldamodel.β)
 plt = synth_data_plot(ldamodel.β, ldamodel.ω_post, true_ω = ω_true,
     topic_ord = topic_order, plt_title = "LDA", legend = false,
     ticksize = 8, labelsize = 12, plot_htmp = false, xlim = (-1.75, 1.5))
-plot!(size = (250,400))
+plot!(size = (250,250))
 plot!(xticklabel = false)
 if save_files; savefig("figures/synth_BTR/synth_LDA_LR.pdf"); end;
 
@@ -343,7 +343,7 @@ slda1model.ω_post = vcat(slda1model.ω_post, transpose(blr_ω_post[2,:]))
 plt = synth_data_plot(slda1model.β, slda1model.ω_post, true_ω = ω_true,
     topic_ord = topic_order, plt_title = "LR-sLDA", legend = false,
     ticksize = 8, labelsize = 12, plot_htmp = false, xlim = (-1.75, 1.5))
-plot!(size = (250,400))
+plot!(size = (250,250))
 if save_files; savefig("figures/synth_BTR/synth_LR_sLDA.pdf"); end;
 
 ## Out of sample prediction
@@ -399,9 +399,9 @@ topic_order[3] = 2
 ω_slda_post = vcat(ω_slda_post, transpose(blr_ω_post[2,:]))
 
 plt = synth_data_plot(β_bpslda, ω_slda_post, true_ω = ω_true,
-    topic_ord = topic_order, plt_title = "LD-BPsLDA", legend = false,
+    topic_ord = topic_order, plt_title = "LR-BPsLDA", legend = false,
     ticksize = 8, labelsize = 12, plot_htmp = false, xlim = (-1.75, 1.5))
-plot!(size = (250,400))
+plot!(size = (250,250))
 if save_files; savefig("figures/synth_BTR/synth_LR_BPsLDA.pdf"); end;
 
 
@@ -444,7 +444,7 @@ topic_order = synth_reorder_topics(slda2model.β)
 plt = synth_data_plot(slda2model.β, slda2model.ω_post, true_ω = ω_true,
     topic_ord = topic_order, plt_title = "sLDA-LR", legend = false,
     ticksize = 8, labelsize = 12, plot_htmp = false, xlim = (-1.75, 1.5))
-plot!(size = (250,400))
+plot!(size = (250,250))
 if save_files; savefig("figures/synth_BTR/synth_sLDA_LR.pdf"); end;
 
 ## Out of sample
@@ -492,7 +492,7 @@ topic_order = [1,2,3]
 plt = synth_data_plot(bpslda2_β, ω_bpslda2_post, true_ω = ω_true,
     topic_ord = topic_order, plt_title = "BPsLDA-LR", legend = false,
     ticksize = 8, labelsize = 12, plot_htmp = false, xlim = (-1.75, 1.5))
-plot!(size = (250,400))
+plot!(size = (250,250))
 if save_files; savefig("figures/synth_BTR/synth_BPsLDA_LR.pdf"); end;
 
 

@@ -2,7 +2,7 @@
 Implementation of BTR with Gibbs sampling for Booking dataset
 """
 
-cd("/Users/maximilianahrens/Documents/BTR.jl")
+cd("/Users/julianashwin/Documents/GitHub/BTR.jl/")
 
 """
 To make sure the latest version of the package is used run
@@ -21,8 +21,7 @@ using TextAnalysis, DataFrames, CSV, Random, GLM, Distributions
 using Plots, StatsPlots, StatsBase, Plots.PlotMeasures, TableView
 
 ## Load data
-data_path = "/booking/"
-df = CSV.read("/Users/maximilianahrens/OneDrive - Nexus365/BTR/AAAI_material/btr_code_appendix/data/booking/booking_btr.csv", DataFrame, threaded = false)
+df = CSV.read("data/Booking_sample.csv", DataFrame, threaded = false)
 # Check that the variables look sensible
 #display(plot(df.date[1:200], df.stars[1:200], label = ["stars"], legend = :bottomleft,xguidefontsize=8))
 
@@ -69,6 +68,21 @@ x = Array{Float64,2}(hcat(df.Average_Score,
 
 y = Array{Float64,1}(df.Reviewer_Score)
 
+
+"""
+Standardise using only the training data
+"""
+## Use mean and std from training data to normalise both sets
+y_mean_tr = mean(train_data.y)
+y_std_tr = std(train_data.y)
+x_mean_tr = mean(train_data.x,dims=1)
+x_std_tr = std(train_data.x,dims=1)
+train_data.y = (train_data.y .- y_mean_tr)#./y_std_tr
+train_data.x = (train_data.x .- x_mean_tr)./x_std_tr
+test_data.y = (test_data.y .- y_mean_tr)#./y_std_tr
+test_data.x = (test_data.x .- x_mean_tr)./x_std_tr
+
+
 "
 x = group_mean(Array{Float64,2}(hcat(df.sentiment,df.stars_av_u)),df.doc_idx)
 y = group_mean(Array{Float64,1}(df.stars_av_b), df.doc_idx)
@@ -113,18 +127,18 @@ Set priors and estimation optioncs here to be consistent across models
 ## Initialiase estimation options
 btropts = BTROptions()
 ## Number of topics
-btropts.ntopics = 5
+btropts.ntopics = 50
 ## LDA priors
 btropts.α=0.5
 btropts.η=0.01
 ## BLR priors
 btropts.μ_ω = 0. # coefficient mean
 btropts.σ_ω = 2. # coefficient variance
-btropts.a_0 = 6. # residual shape: higher moves mean closer to zero
-btropts.b_0 = 1. # residual scale: higher is more spread out
+btropts.a_0 = 3. # residual shape: higher moves mean closer to zero
+btropts.b_0 = 2. # residual scale: higher is more spread out
 # Plot the prior distribution for residual variance (in case unfamiliar with InverseGamma distributions)
 # mean will be b_0/(a_0 - 1)
-plot(InverseGamma(btropts.a_0, btropts.b_0), xlim = (0,1), title = "Residual variance prior",
+plot(InverseGamma(btropts.a_0, btropts.b_0), xlim = (0,3), title = "Residual variance prior",
     label = "Prior on residual variance")
 scatter!([var(y)],[0.],label = "Unconditional variance")
 if save_files; savefig("figures/Booking_BTR/Booking_IGprior.pdf"); end;
@@ -133,9 +147,11 @@ if save_files; savefig("figures/Booking_BTR/Booking_IGprior.pdf"); end;
 btropts.E_iters = 100 # E-step iterations (sampling topic assignments, z)
 btropts.M_iters = 2500 # M-step iterations (sampling regression coefficients residual variance)
 btropts.EM_iters = 50 # Maximum possible EM iterations (will stop here if no convergence)
-btropts.CVEM = :none # Split for separate E and M step batches (if batch = true)
+btropts.CVEM = :obs # Split for separate E and M step batches (if batch = true)
 btropts.CVEM_split = 0.5 # Split for separate E and M step batches (if batch = true)
 btropts.burnin = 20 # Burnin for Gibbs samplers
+
+btropts.mse_conv = 1
 btropts.ω_tol = 0.01 # Convergence tolerance for regression coefficients ω
 btropts.rel_tol = true # Whether to use a relative convergence criteria rather than just absolute
 
@@ -163,14 +179,14 @@ mse_blr = mean((test_data.y .- predict_blr).^2)
 Estimate BTR
 """
 ## Include x regressors by changing the options
-btropts.xregs = [1,2]
+btropts.xregs = [1,2,3,4,5]
 btropts.interactions = Array{Int64,1}([])
 ## Initialise BTRModel object
 btrcrps_tr = create_btrcrps(train_data, btropts.ntopics)
 btrcrps_ts = create_btrcrps(test_data, btropts.ntopics)
 btrmodel = BTRModel(crps = btrcrps_tr, options = btropts)
 ## Estimate BTR with EM-Gibbs algorithm
-btropts.CVEM = :none
+btropts.CVEM = :obs
 btropts.CVEM_split = 0.5
 btrmodel = BTRemGibbs(btrmodel)
 ## Plot results

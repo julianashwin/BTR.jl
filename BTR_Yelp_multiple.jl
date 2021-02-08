@@ -163,7 +163,7 @@ BTR multiple runs
 #subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",string(btropts.ntopics),"/BTR/run_"])
 ## Run multiple times (for different hyperparameters change btropts)
 nruns = 20
-for kk in [5,10,20,30]
+for kk in [50]
     print(join(["\n\n\n",string(kk)," topics\n\n\n"]))
     btropts.ntopics = kk
     ## Set subdirectory and number of times you want to run
