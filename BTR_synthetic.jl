@@ -6,12 +6,8 @@ cd("/Users/julianashwin/Documents/GitHub/BTR.jl/")
 
 
 """
-Load functions and necessary packages
-    To make sure the latest version of the package is used run
-    pkg> dev /Users/julianashwin/Documents/GitHub/BTR.jl
-    or
-    pkg> dev https://github.com/julianashwin/BTR.jl
-
+To install the package is run, enter pkg mode by running "]" then run
+pkg> dev path_to_folder/BTR.jl
 """
 
 using Revise, BTR

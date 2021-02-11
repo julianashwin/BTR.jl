@@ -163,6 +163,35 @@ ldaopts.fullGibbs_iters = 1000
 ldaopts.fullGibbs_thinning = 2
 ldaopts.burnin = 50
 
+
+
+nruns = 1
+for kk in [10,20,30,50]
+    print(join(["\n\n\n",string(kk)," topics\n\n\n"]))
+    ldaopts.ntopics = kk
+
+    # a,b = (0,0)
+    subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",
+            string(kk),"/ab0_0/LDA/run_"])
+    ldaopts.a_0 = 0.
+    ldaopts.b_0 = 0.
+    BTR_multipleruns(train_data, test_data, ldaopts, nruns, subdirectory)
+
+    subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",
+            string(kk),"/ab3_4/LDA/run_"])
+    ldaopts.a_0 = 3.
+    ldaopts.b_0 = 4.
+    BTR_multipleruns(train_data, test_data, ldaopts, nruns, subdirectory)
+
+    subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",
+            string(kk),"/ab1p5_4/LDA/run_"])
+    ldaopts.a_0 = 1.5
+    ldaopts.b_0 = 4.
+    BTR_multipleruns(train_data, test_data, ldaopts, nruns, subdirectory)
+
+end
+
+
 nruns = 20
 for kk in [100]
     print(join(["\n\n\n",string(kk)," topics\n\n\n"]))

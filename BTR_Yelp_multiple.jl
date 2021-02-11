@@ -162,17 +162,33 @@ BTR multiple runs
 ## Set subdirectory and number of times you want to run
 #subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",string(btropts.ntopics),"/BTR/run_"])
 ## Run multiple times (for different hyperparameters change btropts)
-nruns = 20
-for kk in [50]
+
+nruns = 1
+for kk in [10,20,30,50]
     print(join(["\n\n\n",string(kk)," topics\n\n\n"]))
     btropts.ntopics = kk
-    ## Set subdirectory and number of times you want to run
-    subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",
-        string(kk),"/BTR/run_"])
-    ## Run multiple times (for different hyperparameters change btropts)
-    BTR_multipleruns(train_data, test_data, btropts, nruns, subdirectory)
-end
 
+    # a,b = (0,0)
+    subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",
+            string(kk),"/ab0_0/BTR/run_"])
+    btropts.a_0 = 0.
+    btropts.b_0 = 0.
+    BTR_multipleruns(train_data, test_data, btropts, nruns, subdirectory)
+
+    subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",
+            string(kk),"/ab3_4/BTR/run_"])
+    btropts.a_0 = 3.
+    btropts.b_0 = 4.
+    BTR_multipleruns(train_data, test_data, btropts, nruns, subdirectory)
+
+    subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",
+            string(kk),"/ab1p5_4/BTR/run_"])
+    btropts.a_0 = 1.5
+    btropts.b_0 = 4.
+    BTR_multipleruns(train_data, test_data, btropts, nruns, subdirectory)
+
+
+end
 
 
 """

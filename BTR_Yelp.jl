@@ -5,11 +5,8 @@ Implementation of BTR with Gibbs sampling for Yelp dataset
 cd("/Users/julianashwin/Documents/GitHub/BTR.jl/")
 
 """
-To make sure the latest version of the package is used run
-pkg> dev /Users/julianashwin/Documents/GitHub/BTR.jl
-or
-pkg> dev https://github.com/julianashwin/BTR.jl
-
+To install the package is run, enter pkg mode by running "]" then run
+pkg> dev path_to_folder/BTR.jl
 """
 
 """
@@ -27,15 +24,6 @@ display(plot(df.date[1:200], df.stars[1:200], label = ["stars"], legend = :botto
 
 ## Toggle whether to save the various figures output throughout
 save_files = false
-
-"""
-Generate a sentiment score from unstemmed documents
-"""
-## Create a sentiment score for each review using the Harvard Inqiurer lists
-#df.text = string.(df.text)
-#df.sentiment = sentimentscore(df.text, HIV_dicts)
-ols = lm(@formula(stars ~ sentiment + stars_av_u), df)
-display(ols)
 
 
 """

@@ -5,11 +5,8 @@ Implementation of BTR with Gibbs sampling for Booking dataset
 cd("/Users/julianashwin/Documents/GitHub/BTR.jl/")
 
 """
-To make sure the latest version of the package is used run
-pkg> dev /Users/maximilianahrens/Documents/BTR.jl
-or
-pkg> dev https://github.com/julianashwin/BTR.jl
-
+To install the package is run, enter pkg mode by running "]" then run
+pkg> dev path_to_folder/BTR.jl
 """
 
 """
@@ -27,15 +24,6 @@ df = CSV.read("data/Booking_sample.csv", DataFrame, threaded = false)
 
 ## Toggle whether to save the various figures output throughout
 save_files = false
-
-"""
-Generate a sentiment score from unstemmed documents
-"""
-## Create a sentiment score for each review using the Harvard Inqiurer lists
-df.text = string.(df.Full_Review_Clean)
-df.sentiment = sentimentscore(df.Full_Review_Clean, HIV_dicts)
-ols = lm(@formula(Reviewer_Score ~ sentiment), df)
-display(ols)
 
 
 """
@@ -68,19 +56,6 @@ x = Array{Float64,2}(hcat(df.Average_Score,
 
 y = Array{Float64,1}(df.Reviewer_Score)
 
-
-"""
-Standardise using only the training data
-"""
-## Use mean and std from training data to normalise both sets
-y_mean_tr = mean(train_data.y)
-y_std_tr = std(train_data.y)
-x_mean_tr = mean(train_data.x,dims=1)
-x_std_tr = std(train_data.x,dims=1)
-train_data.y = (train_data.y .- y_mean_tr)#./y_std_tr
-train_data.x = (train_data.x .- x_mean_tr)./x_std_tr
-test_data.y = (test_data.y .- y_mean_tr)#./y_std_tr
-test_data.x = (test_data.x .- x_mean_tr)./x_std_tr
 
 
 "
@@ -117,6 +92,18 @@ if save_files; savefig("figures/Booking_BTR/Booking_trainsplit.pdf"); end;
 
 
 
+"""
+Standardise using only the training data
+"""
+## Use mean and std from training data to normalise both sets
+y_mean_tr = mean(train_data.y)
+y_std_tr = std(train_data.y)
+x_mean_tr = mean(train_data.x,dims=1)
+x_std_tr = std(train_data.x,dims=1)
+train_data.y = (train_data.y .- y_mean_tr)#./y_std_tr
+train_data.x = (train_data.x .- x_mean_tr)./x_std_tr
+test_data.y = (test_data.y .- y_mean_tr)#./y_std_tr
+test_data.x = (test_data.x .- x_mean_tr)./x_std_tr
 
 
 
@@ -127,7 +114,7 @@ Set priors and estimation optioncs here to be consistent across models
 ## Initialiase estimation options
 btropts = BTROptions()
 ## Number of topics
-btropts.ntopics = 50
+btropts.ntopics = 20
 ## LDA priors
 btropts.α=0.5
 btropts.η=0.01
@@ -148,7 +135,7 @@ btropts.E_iters = 100 # E-step iterations (sampling topic assignments, z)
 btropts.M_iters = 2500 # M-step iterations (sampling regression coefficients residual variance)
 btropts.EM_iters = 50 # Maximum possible EM iterations (will stop here if no convergence)
 btropts.CVEM = :obs # Split for separate E and M step batches (if batch = true)
-btropts.CVEM_split = 0.5 # Split for separate E and M step batches (if batch = true)
+btropts.CVEM_split = 0.75 # Split for separate E and M step batches (if batch = true)
 btropts.burnin = 20 # Burnin for Gibbs samplers
 
 btropts.mse_conv = 1

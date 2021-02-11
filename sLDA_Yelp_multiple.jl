@@ -178,6 +178,36 @@ sldaopts.xregs = Array{Int64}([])
 sldaopts.interactions = Array{Int64}([])
 
 
+
+nruns = 1
+for kk in [10,20,30,50]
+    print(join(["\n\n\n",string(kk)," topics\n\n\n"]))
+    sldaopts.ntopics = kk
+
+    # a,b = (0,0)
+    subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",
+            string(kk),"/ab0_0/sLDA/run_"])
+    sldaopts.a_0 = 0.
+    sldaopts.b_0 = 0.
+    BTR_multipleruns(train_data_slda, test_data_slda, sldaopts, nruns, subdirectory)
+
+    subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",
+            string(kk),"/ab3_4/sLDA/run_"])
+    sldaopts.a_0 = 3.
+    sldaopts.b_0 = 4.
+    BTR_multipleruns(train_data_slda, test_data_slda, sldaopts, nruns, subdirectory)
+
+    subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",
+            string(kk),"/ab1p5_4/sLDA/run_"])
+    sldaopts.a_0 = 1.5
+    sldaopts.b_0 = 4.
+    BTR_multipleruns(train_data_slda, test_data_slda, sldaopts, nruns, subdirectory)
+
+end
+
+
+
+
 nruns = 4
 for kk in [100]
     print(join(["\n\n\n",string(kk)," topics\n\n\n"]))
