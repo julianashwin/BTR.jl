@@ -175,19 +175,19 @@ for kk in [10,20,30,50]
             string(kk),"/ab0_0/LDA/run_"])
     ldaopts.a_0 = 0.
     ldaopts.b_0 = 0.
-    BTR_multipleruns(train_data, test_data, ldaopts, nruns, subdirectory)
+    LDAreg_multipleruns(train_data, test_data, ldaopts, nruns, subdirectory)
 
     subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",
             string(kk),"/ab3_4/LDA/run_"])
     ldaopts.a_0 = 3.
     ldaopts.b_0 = 4.
-    BTR_multipleruns(train_data, test_data, ldaopts, nruns, subdirectory)
+    LDAreg_multipleruns(train_data, test_data, ldaopts, nruns, subdirectory)
 
     subdirectory = join(["/Users/julianashwin/Desktop/BTR_runs/Yelp/K",
             string(kk),"/ab1p5_4/LDA/run_"])
     ldaopts.a_0 = 1.5
     ldaopts.b_0 = 4.
-    BTR_multipleruns(train_data, test_data, ldaopts, nruns, subdirectory)
+    LDAreg_multipleruns(train_data, test_data, ldaopts, nruns, subdirectory)
 
 end
 
