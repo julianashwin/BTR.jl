@@ -114,7 +114,7 @@ Set priors and estimation optioncs here to be consistent across models
 ## Initialiase estimation options
 btropts = BTROptions()
 ## Number of topics
-btropts.ntopics = 20
+btropts.ntopics = 100
 ## LDA priors
 btropts.α=0.5
 btropts.η=0.01
@@ -135,7 +135,7 @@ btropts.E_iters = 100 # E-step iterations (sampling topic assignments, z)
 btropts.M_iters = 2500 # M-step iterations (sampling regression coefficients residual variance)
 btropts.EM_iters = 50 # Maximum possible EM iterations (will stop here if no convergence)
 btropts.CVEM = :obs # Split for separate E and M step batches (if batch = true)
-btropts.CVEM_split = 0.75 # Split for separate E and M step batches (if batch = true)
+btropts.CVEM_split = 0.5 # Split for separate E and M step batches (if batch = true)
 btropts.burnin = 20 # Burnin for Gibbs samplers
 
 btropts.mse_conv = 1

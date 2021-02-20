@@ -20,7 +20,7 @@ using Plots, StatsPlots, StatsBase, Plots.PlotMeasures, TableView
 ## Load data
 df = CSV.read("data/yelp_toronto_sample.csv", DataFrame, threaded = false)
 # Check that the variables look sensible
-display(plot(df.date[1:200], df.stars[1:200], label = ["stars"], legend = :bottomleft,xguidefontsize=8))
+display(plot(df.stars[1:200], label = ["stars"], legend = :bottomleft,xguidefontsize=8))
 
 ## Toggle whether to save the various figures output throughout
 save_files = false
@@ -92,7 +92,7 @@ Set priors and estimation optioncs here to be consistent across models
 ## Initialiase estimation options
 btropts = BTROptions()
 ## Number of topics
-btropts.ntopics = 50
+btropts.ntopics = 30
 ## LDA priors
 btropts.α=0.5
 btropts.η=0.1
