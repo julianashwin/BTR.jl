@@ -62,6 +62,9 @@ fm = @formula(Reviewer_Score ~ av_score + Leisure + Couple + sentiment)
 empirical_lm = lm(fm, df)
 display(empirical_lm)
 
+## Export
+CSV.write("data/booking_semisynth_sample.csv", df)
+
 """
 Create synthetic labels
 """
@@ -174,6 +177,7 @@ blr_coeffs_post, σ2_post = BLR_Gibbs(all_data.y, regressors_notext, iteration =
     m_0 = btropts.μ_ω, σ_ω = btropts.σ_ω, a_0 = btropts.a_0, b_0 = btropts.b_0)
 blr_coeffs = Array{Float64,1}(vec(mean(blr_coeffs_post, dims = 2)))
 
+notext_TE = blr_coeffs[3]
 
 
 """
@@ -237,8 +241,7 @@ slda2opts.xregs = []
 slda2opts.interactions = []
 
 ## Initialise BTRModel object
-slda2crps_tr = create_btrcrps(train_data, slda2opts.ntopics)
-slda2crps_ts = create_btrcrps(test_data, slda2opts.ntopics)
+slda2crps_tr = create_btrcrps(all_data, slda2opts.ntopics)
 slda2model = BTRModel(crps = slda2crps_tr, options = slda2opts)
 
 ## Estimate sLDA on residuals
