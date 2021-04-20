@@ -35,6 +35,10 @@ update_lexicon!(crps)
 dtm_sparse = DocumentTermMatrix(crps)
 vocab = dtm_sparse.terms
 
+CSV.write("data/Booking_synth_vocab.csv", DataFrame(x1 = vocab))
+CSV.write("data/Booking_synth_dtm.csv", DataFrame(dtm_sparse.dtm))
+
+
 tf_df = DataFrame(id = 1:length(vocab), term = vocab, freq = vec(sum(dtm_sparse.dtm, dims=1)))
 sort!(tf_df, :freq, rev= true)
 
