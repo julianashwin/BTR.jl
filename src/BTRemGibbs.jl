@@ -69,7 +69,7 @@ function BTRemGibbs(btrmodel::BTRModel)
 
         # If mse_conv > 0, then use this as convergence criterion
         if ((opts.mse_conv > 0) & (em > opts.mse_conv))
-            mse_diff = (mean(mse_iters[em:(em-mse_conv+1)]) - mse_new)
+            mse_diff = (mean(mse_iters[(em-mse_conv+1):em]) - mse_new)
             if mse_diff < 0
                 btrmodel.converged = true
                 break
@@ -172,7 +172,7 @@ function BTCemGibbs(btcmodel::BTCModel)
 
         # If mse_conv > 0, then use this as convergence criterion
         if ((crossent_conv > 0) & (em > crossent_conv))
-            crossent_diff = (mean(crossent_iters[em:(em-crossent_conv+1)]) - crossent_new)
+            crossent_diff = (mean(crossent_iters[(em-crossent_conv+1):em]) - crossent_new)
             if crossent_diff <= 0
                 btcmodel.converged = true
                 break

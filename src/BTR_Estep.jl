@@ -88,10 +88,11 @@ function BTREstep(btrmodel::BTRModel)::BTRModel
                         end
                     end
                     #display(join(string.([dd,":",nn])))
-                    para.topic[nn] = new_topicid # Populate document topic
                     if new_topicid < 1
-                        display(new_topicid)
+                        #display("Adjusting for numerical overflow, consider removing very short documents or reducing number of topics")
+                        new_topicid = sample(findall(isinf.(zprobs)))
                     end
+                    para.topic[nn] = new_topicid # Populate document topic
                     para.topicidcount[new_topicid] = get(para.topicidcount, new_topicid, 0) + 1 # Add to topic counts
                     topics[new_topicid].count += 1 # Add to total topic count
                     topics[new_topicid].wordcount[word] = get(topics[new_topicid].wordcount, word, 0) + 1 # Add to topic-word count
@@ -234,10 +235,11 @@ function BTCEstep(btcmodel::BTCModel)::BTCModel
                         end
                     end
                     #display(join(string.([dd,":",nn])))
-                    para.topic[nn] = new_topicid # Populate document topic
                     if new_topicid < 1
-                        display(new_topicid)
+                        #display("Adjusting for numerical overflow, consider removing very short documents or reducing number of topics")
+                        new_topicid = sample(findall(isinf.(zprobs)))
                     end
+                    para.topic[nn] = new_topicid # Populate document topic
                     para.topicidcount[new_topicid] = get(para.topicidcount, new_topicid, 0) + 1 # Add to topic counts
                     topics[new_topicid].count += 1 # Add to total topic count
                     topics[new_topicid].wordcount[word] = get(topics[new_topicid].wordcount, word, 0) + 1 # Add to topic-word count

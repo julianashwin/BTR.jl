@@ -168,6 +168,7 @@ if save_files
     dtm_dense = Matrix(train_data.dtm)
     dtm_df = DataFrame(dtm_dense)
     CSV.write("data/synth_BTR/synth_dtm_dense.csv", dtm_df, header=false)
+    CSV.write("data/synth_BTR/synth_vocab.csv", DataFrame(vocab=vocab), header=false)
     CSV.write("data/synth_BTR/synth_data.csv", df)
 end
 

@@ -114,7 +114,7 @@ Set priors and estimation optioncs here to be consistent across models
 ## Initialiase estimation options
 btropts = BTROptions()
 ## Number of topics
-btropts.ntopics = 100
+btropts.ntopics = 200
 ## LDA priors
 btropts.α=0.5
 btropts.η=0.01
@@ -186,6 +186,7 @@ btr_predicts = BTRpredict(btrcrps_ts, btrmodel)
 #btr_predicts.crps.topics = gettopics(btrcrps_ts.docs)
 mse_btr = mean((btr_predicts.y .- btr_predicts.y_pred).^2)
 pplxy_btr = btr_predicts.pplxy
+# 200-int MSE is 1.39-1.40
 
 """
 Estimate 2 stage LDA then Bayesian Linear Regression (BLR)
