@@ -94,7 +94,7 @@ if regenerate_data
     #CSV.write("data/booking_semisynth_sample.csv", df)
 end
 
-display(cor(hcat(df.Leisure, df.sentiment, df.pos_score, df.work_score, df.synth_y)))
+display(cor(hcat(df.Leisure, df.sentiment, df.pos_prop, df.synth_y)))
 
 
 
@@ -151,7 +151,7 @@ Set priors and estimation optioncs here to be consistent across models
 ## Initialiase estimation options
 opts = BTROptions()
 ## Number of topics
-opts.ntopics = 10
+opts.ntopics = 20
 ## LDA priors
 opts.α=0.5
 opts.η=0.01
@@ -229,7 +229,7 @@ TE_post_df[:,"BTR_noCVEM"] = sort(btrmodel_noCVEM.ω_post[btropts_noCVEM.ntopics
 
 
 ## Repeat for many K
-TE_Krobustness_df = DataFrame(NoText_reg = sort(blr_coeffs_post[3,:]))
+TE_Krobustness_df = DataFrame(NoText_reg = sort(blr_notext_coeffs_post[3,:]))
 Ks = [2,3,4,5,6,7,8,9,10,15,20,25,30,40,50]
 for K in Ks
     display("Estimating with "*string(K)*" topics")
@@ -243,8 +243,11 @@ for K in Ks
     ## Estimate BTR with EM-Gibbs algorithm
     btrmodel_noCVEM = BTRemGibbs(btrmodel_noCVEM)
 
-    TE_Krobustness_df[:,"BTR_noCVEM_K"*string(K)] = sort(btrmodel_noCVEM.ω_post[btropts_CVEM.ntopics+2,:])
+    TE_Krobustness_df[:,"BTR_noCVEM_K"*string(K)] = sort(btrmodel_noCVEM.ω_post[btropts_noCVEM.ntopics+2,:])
 end
+
+mean_TEs = vec(mean(Matrix(TE_Krobustness_df[:,(2:(length(Ks)+1))]), dims = 1))
+plot(Ks, mean_TEs)
 
 
 
@@ -255,6 +258,7 @@ Estimate BTR with CVEM
 btropts_CVEM = deepcopy(opts)
 btropts_CVEM.CVEM = :obs
 btropts_CVEM.CVEM_split = 0.5
+btropts_CVEM.mse_conv = 2
 ## Include x regressors by changing the options
 btropts_CVEM.xregs = [1,2]
 btropts_CVEM.interactions = Array{Int64,1}([])
@@ -277,6 +281,7 @@ btr_pplxy = btrmodel_CVEM.pplxy
 TE_post_df[:,"BTR_CVEM"] = sort(btrmodel_CVEM.ω_post[btropts_CVEM.ntopics+2,:])
 
 
+
 ## Repeat for many K
 for K in Ks
     display("Estimating with "*string(K)*" topics")
@@ -293,7 +298,7 @@ for K in Ks
 end
 
 
-mean_TEs = vec(mean(Matrix(TE_Krobustness_df), dims = 1))
+mean_TEs = vec(mean(Matrix(TE_Krobustness_df[:,(length(Ks)+2):(2*length(Ks)+1)]), dims = 1))
 plot(Ks, mean_TEs)
 
 

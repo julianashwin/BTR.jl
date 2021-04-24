@@ -165,7 +165,7 @@ df = DataFrame(doc_id = docidx_vars,
                Z_bar3 = Z_bar_all[:,3])
 if save_files
     dtmtodfs(dtm_sparse.dtm, docidx_dtm, vocab, save_dir = "data/synth_BTR/")
-    dtm_dense = Matrix(train_data.dtm)
+    dtm_dense = Matrix(all_data.dtm)
     dtm_df = DataFrame(dtm_dense)
     CSV.write("data/synth_BTR/synth_dtm_dense.csv", dtm_df, header=false)
     CSV.write("data/synth_BTR/synth_vocab.csv", DataFrame(vocab=vocab), header=false)
