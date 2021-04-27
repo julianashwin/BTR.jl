@@ -63,7 +63,7 @@ df.harvard_score = (df.harvard_score.-mean(df.harvard_score))./std(df.harvard_sc
 Create synthetic variables
 """
 ## Set γ_1 for strength of correlation with confounder
-γ_1 = 1.0
+γ_1 = 0.5
 γ_0 = 0.0
 σ_y_true = 0.1
 
@@ -77,6 +77,8 @@ display(cor(hcat(df.US, df.PrUS, df.sentiment)))
 
 df[:,"synth_y"] = 1.0.*df.stars_av_b + 1.0.*df.harvard_score - 1.0 .* df.US + 0.1.*randn(nrow(df))
 
+## Export
+CSV.write("data/yelp_semisynth_sample_gamma"*string(γ_1)*".csv", df)
 
 
 """
@@ -95,6 +97,7 @@ fm = @formula(synth_y ~ US)
 synth_nox = lm(fm, df)
 display(synth_nox)
 
+display(cor(hcat(df.synth_y, df.US, df.harvard_score)))
 
 """
 Prepare data for estimation
@@ -144,7 +147,7 @@ Set priors and estimation optioncs here to be consistent across models
 ## Initialiase estimation options
 opts = BTROptions()
 ## Number of topics
-opts.ntopics = 10
+opts.ntopics = 30
 ## LDA priors
 opts.α=0.5
 opts.η=0.1
@@ -192,6 +195,7 @@ blr_coeffs = Array{Float64,1}(vec(mean(blr_notext_coeffs_post, dims = 2)))
 notext_TE = blr_coeffs[3]
 
 TE_post_df = DataFrame(NoText_reg = sort(blr_notext_coeffs_post[3,:]))
+TE_Krobustness_df = DataFrame(NoText_reg = sort(blr_notext_coeffs_post[3,:]))
 
 
 
@@ -225,6 +229,28 @@ btr_pplxy = btrmodel_noCVEM.pplxy
 TE_post_df[:,"BTR_noCVEM"] = sort(btrmodel_noCVEM.ω_post[btropts_noCVEM.ntopics+2,:])
 
 
+Ks = [2,3,4,5,6,7,8,9,10,15,20,25,30,40,50]
+for K in Ks
+    display("Estimating with "*string(K)*" topics")
+    btropts_noCVEM = deepcopy(opts)
+    btropts_noCVEM.CVEM = :none
+    btropts_noCVEM.ntopics = K
+    btropts_noCVEM.mse_conv = 2
+
+    btrcrps_tr = create_btrcrps(all_data, btropts_noCVEM.ntopics)
+    btrmodel_noCVEM = BTRModel(crps = btrcrps_tr, options = btropts_noCVEM)
+    ## Estimate BTR with EM-Gibbs algorithm
+    btrmodel_noCVEM = BTRemGibbs(btrmodel_noCVEM)
+
+    TE_Krobustness_df[:,"BTR_noCVEM_K"*string(K)] = sort(btrmodel_noCVEM.ω_post[btropts_noCVEM.ntopics+2,:])
+end
+
+mean_TEs = vec(mean(Matrix(TE_Krobustness_df[:,(2:(length(Ks)+1))]), dims = 1))
+plot(Ks, mean_TEs, title = "Yelp semi-synth, without CVEM")
+
+
+
+
 
 """
 Estimate BTR with CVEM
@@ -254,14 +280,12 @@ btr_pplxy = btrmodel_CVEM.pplxy
 
 TE_post_df[:,"BTR_CVEM"] = sort(btrmodel_CVEM.ω_post[btropts_CVEM.ntopics+2,:])
 
-"""
-Repeat for many K
-"""
-TE_Krobustness_df = DataFrame(NoText_reg = sort(blr_notext_coeffs_post[3,:]))
-for K in [2,3,4,5,6,7,8,9,10,15,20,15,30,40,50]
+## Repeat for many K
+for K in Ks
     display("Estimating with "*string(K)*" topics")
     btropts_CVEM = deepcopy(opts)
     btropts_CVEM.ntopics = K
+    btropts_CVEM.mse_conv = 2
 
     btrcrps_tr = create_btrcrps(all_data, btropts_CVEM.ntopics)
     btrmodel_CVEM = BTRModel(crps = btrcrps_tr, options = btropts_CVEM)
@@ -271,6 +295,8 @@ for K in [2,3,4,5,6,7,8,9,10,15,20,15,30,40,50]
     TE_Krobustness_df[:,"BTR_CVEM_K"*string(K)] = sort(btrmodel_CVEM.ω_post[btropts_CVEM.ntopics+2,:])
 end
 
+mean_TEs = vec(mean(Matrix(TE_Krobustness_df[:,(length(Ks)+2):(2*length(Ks)+1)]), dims = 1))
+plot(Ks, mean_TEs, title = "Yelp semi-synth, with CVEM")
 
 
 
@@ -353,10 +379,11 @@ Plot treatment effects
 """
 nmodels = 5
 model_names = ["BTR (no CVEM)","BTR (CVEM)", "LDA", "sLDA", "NoText BLR"]
-plt1 = plot(legend = false, ylim = (0,nmodels+1), xlim = (0., 2.0),
+plt1 = plot(legend = false, ylim = (0,nmodels+1), xlim = (-1.5, 0.5),
     xlabel = "Treatment Effect", ylabel = "Model",
     yticks = (1:nmodels, model_names))
-plot!([1.,1.],[0.,(Float64(nmodels)+0.6)],linestyle = :dash,color =:red)
+plot!([-1.,-1.],[0.,(Float64(nmodels)+0.6)],linestyle = :dash,color =:red,
+    title = "Yelp semi-synth γ1 = "*string(γ_1))
 
 coef_plot(sort(TE_post_df.BTR_noCVEM),1,scheme = :blue)
 coef_plot(sort(TE_post_df.BTR_CVEM),2,scheme = :blue)

@@ -247,8 +247,7 @@ for K in Ks
 end
 
 mean_TEs = vec(mean(Matrix(TE_Krobustness_df[:,(2:(length(Ks)+1))]), dims = 1))
-plot(Ks, mean_TEs)
-
+plot(Ks, mean_TEs, title = "Booking semi-synth, without CVEM")
 
 
 """
@@ -299,7 +298,7 @@ end
 
 
 mean_TEs = vec(mean(Matrix(TE_Krobustness_df[:,(length(Ks)+2):(2*length(Ks)+1)]), dims = 1))
-plot(Ks, mean_TEs)
+plot(Ks, mean_TEs, title = "Booking semi-synth, with CVEM")
 
 
 """
@@ -334,6 +333,23 @@ if save_files; savefig("figures/Booking_BTR/Booking_LDA.pdf"); end;
 
 
 TE_post_df[:,"LDA"] = sort(ldamodel.ω_post[ldaopts.ntopics+2,:])
+
+## Repeat for many K
+for K in Ks
+    display("Estimating with "*string(K)*" topics")
+    ldaopts = deepcopy(opts)
+    ldaopts.ntopics = K
+    ldaopts.mse_conv = 2
+
+    ldacrps_tr = create_btrcrps(all_data, ldaopts.ntopics)
+    ldamodel = BTRModel(crps = ldacrps_tr, options = ldaopts)
+    ## Estimate BTR with EM-Gibbs algorithm
+    ldamodel = LDAGibbs(ldamodel)
+
+    TE_Krobustness_df[:,"LDA_K"*string(K)] = sort(ldamodel.ω_post[ldaopts.ntopics+2,:])
+end
+
+
 
 
 
