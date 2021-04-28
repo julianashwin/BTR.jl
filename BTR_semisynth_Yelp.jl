@@ -17,14 +17,16 @@ using BTR
 using TextAnalysis, DataFrames, CSV, Random, GLM, Distributions
 using Plots, StatsPlots, StatsBase, Plots.PlotMeasures, TableView
 
-## Load data
-df = CSV.read("data/yelp_toronto_sample.csv", DataFrame, threaded = false)
-# Check that the variables look sensible
-display(plot(df.stars[1:200], label = ["stars"], legend = :bottomleft,xguidefontsize=8))
+
 
 ## Toggle whether to save the various figures output throughout
 save_files = false
-
+regenerate_data = false
+γ_1 = 0.5
+## Load data
+df = CSV.read("data/yelp_semisynth_sample_gamma"*string(γ_1)*".csv", DataFrame, threaded = false)
+## Check correlations
+display(cor(hcat(df.synth_y, df.stars_av_b, df.US, df.harvard_score)))
 
 """
 Create document ids from either review id or business id
@@ -35,6 +37,51 @@ df.doc_idx = 1:nrow(df)
 #df[!,:doc_idx] = convert_to_ids(df.review_id)
 #sort!(df, [:doc_idx])
 #showtable(df)
+
+"""
+Create synthetic variables
+"""
+
+if regenerate_data
+
+    docs = StringDocument.(df.text_clean)
+    crps = Corpus(docs)
+    update_lexicon!(crps)
+
+    lex_df = DataFrame(term = String.(keys(lexicon(crps))),
+        count = Int.(values(lexicon(crps))))
+    vocab = lex_df.term[(lex_df.count .> 10)]
+    dtm_sparse = DocumentTermMatrix(crps, vocab)
+    dtm_sparse.terms
+
+
+    nwords = vec(sum(dtm_sparse.dtm, dims = 2))
+    pos_counts = Float64.(wordlistcounts(dtm_sparse.dtm,vocab,HIV_dicts.Positive))
+    neg_counts = Float64.(wordlistcounts(dtm_sparse.dtm,vocab,HIV_dicts.Negative))
+    df[:, "harvard_score"] .= (pos_counts.-neg_counts)./nwords
+    df.harvard_score[isnan.(df.harvard_score)] .= 0.
+    df.harvard_score = (df.harvard_score.-mean(df.harvard_score))./std(df.harvard_score)
+
+
+    ## Set γ_1 for strength of correlation with confounder
+    γ_1 = 0.0
+    γ_0 = 0.0
+    σ_y_true = 0.1
+
+    df[:,"US"] .= 0.
+    df[:,"PrUS"] .= exp.(γ_0 .+ γ_1.*df.harvard_score)./(1.0 .+ exp.(γ_0 .+ γ_1.*df.harvard_score))
+
+    df[:,"US"] .= Float64.(rand.(Binomial.(1,df.PrUS)))
+
+    mean(df.US)
+    df[:,"synth_y"] = 1.0.*df.stars_av_b + 1.0.*df.harvard_score - 1.0 .* df.US + 0.1.*randn(nrow(df))
+
+    display(cor(hcat(df.synth_y, df.stars_av_b, df.US, df.harvard_score)))
+
+
+    ## Export
+    #CSV.write("data/yelp_semisynth_sample_gamma"*string(γ_1)*".csv", df)
+end
 
 
 """
@@ -51,34 +98,6 @@ vocab = lex_df.term[(lex_df.count .> 10)]
 dtm_sparse = DocumentTermMatrix(crps, vocab)
 dtm_sparse.terms
 
-
-nwords = vec(sum(dtm_sparse.dtm, dims = 2))
-pos_counts = Float64.(wordlistcounts(dtm_sparse.dtm,vocab,HIV_dicts.Positive))
-neg_counts = Float64.(wordlistcounts(dtm_sparse.dtm,vocab,HIV_dicts.Negative))
-df[:, "harvard_score"] .= (pos_counts.-neg_counts)./nwords
-df.harvard_score[isnan.(df.harvard_score)] .= 0.
-df.harvard_score = (df.harvard_score.-mean(df.harvard_score))./std(df.harvard_score)
-
-"""
-Create synthetic variables
-"""
-## Set γ_1 for strength of correlation with confounder
-γ_1 = 0.5
-γ_0 = 0.0
-σ_y_true = 0.1
-
-df[:,"US"] .= 0.
-df[:,"PrUS"] .= exp.(γ_0 .+ γ_1.*df.harvard_score)./(1.0 .+ exp.(γ_0 .+ γ_1.*df.harvard_score))
-
-df[:,"US"] .= Float64.(rand.(Binomial.(1,df.PrUS)))
-
-mean(df.US)
-display(cor(hcat(df.US, df.PrUS, df.sentiment)))
-
-df[:,"synth_y"] = 1.0.*df.stars_av_b + 1.0.*df.harvard_score - 1.0 .* df.US + 0.1.*randn(nrow(df))
-
-## Export
-CSV.write("data/yelp_semisynth_sample_gamma"*string(γ_1)*".csv", df)
 
 
 """
@@ -226,7 +245,7 @@ if save_files; savefig("figures/Booking_BTR/Booking_BTR.pdf"); end;
 btr_noCEVM_TE = btrmodel_noCVEM.ω[btropts_noCVEM.ntopics+2]
 btr_pplxy = btrmodel_noCVEM.pplxy
 
-TE_post_df[:,"BTR_noCVEM"] = sort(btrmodel_noCVEM.ω_post[btropts_noCVEM.ntopics+2,:])
+
 
 
 Ks = [2,3,4,5,6,7,8,9,10,15,20,25,30,40,50]
