@@ -172,7 +172,7 @@ opts.E_iters = 100 # E-step iterations (sampling topic assignments, z)
 opts.M_iters = 2500 # M-step iterations (sampling regression coefficients residual variance)
 opts.EM_iters = 50 # Maximum possible EM iterations (will stop here if no convergence)
 opts.CVEM = :obs # Split for separate E and M step batches (if batch = true)
-opts.CVEM_split = 0.5 # Split for separate E and M step batches (if batch = true)
+opts.CVEM_split = 0.7 # Split for separate E and M step batches (if batch = true)
 opts.burnin = 20 # Burnin for Gibbs samplers
 
 opts.mse_conv = 2
@@ -346,6 +346,14 @@ for K in Ks
     ## Estimate BTR with EM-Gibbs algorithm
     ldamodel = LDAGibbs(ldamodel)
 
+    ## Bayesian linear regression on training set
+    blr_ω, blr_σ2, blr_ω_post, blr_σ2_post = BLR_Gibbs(ldamodel.y, ldamodel.regressors,
+        m_0 = ldaopts.μ_ω, σ_ω = ldaopts.σ_ω, a_0 = ldaopts.a_0, b_0 = ldaopts.b_0,
+        iteration = ldaopts.M_iters)
+    ldamodel.ω = blr_ω
+    ldamodel.ω_post = blr_ω_post
+
+
     TE_Krobustness_df[:,"LDA_K"*string(K)] = sort(ldamodel.ω_post[ldaopts.ntopics+2,:])
 end
 
@@ -357,37 +365,127 @@ end
 """
 Estimate 2 stage slDA then BLR on residuals
 """
-## Set options sLDA on residuals
-slda2opts = deepcopy(opts)
-slda2opts.xregs = Array{Int64,1}([])
-slda2opts.interactions = Array{Int64,1}([])
+## Repeat for many K
+for K in Ks
+    display("Estimating sLDA with "*string(K)*" topics")
+    ## Set options sLDA on residuals
+    slda2opts = deepcopy(opts)
+    slda2opts.xregs = Array{Int64,1}([])
+    slda2opts.interactions = Array{Int64,1}([])
 
-## Initialise BTRModel object
-slda2crps_tr = create_btrcrps(all_data, slda2opts.ntopics)
-slda2model = BTRModel(crps = slda2crps_tr, options = slda2opts)
+    ## Initialise BTRModel object
+    slda2crps_tr = create_btrcrps(all_data, slda2opts.ntopics)
+    slda2model = BTRModel(crps = slda2crps_tr, options = slda2opts)
 
-## Estimate sLDA on residuals
-slda2model = BTRemGibbs(slda2model)
+    ## Estimate sLDA on residuals
+    slda2model = BTRemGibbs(slda2model)
 
-## Plot results
-BTR_plot(slda2model.β, slda2model.ω_post, slda2model.crps.vocab,
-    plt_title = "Booking sLDA + BLR", fontsize = 10, nwords = 10, title_size = 10)
-if save_files; savefig("figures/Booking_BTR/Booking_sLDA_LR.pdf"); end;
+    ## Identify residuals to train second stage regression
+    residuals_slda = train_data.y .- slda2model.regressors*slda2model.ω
 
-## Identify residuals to train second stage regression
-residuals_slda = train_data.y .- slda2model.regressors*slda2model.ω
+    ## Bayesian linear regression on training set
+    regressors_slda = hcat(ones(size(train_data.x,1)),train_data.x)
+    # No fixed effect, no batch
+    blr_ω, blr_σ2, blr_ω_post, blr_σ2_post = BLR_Gibbs(residuals_slda, regressors_slda,
+        m_0 = slda2opts.μ_ω, σ_ω = slda2opts.σ_ω, a_0 = slda2opts.a_0, b_0 = slda2opts.b_0,
+        iteration = slda2opts.M_iters)
 
-## Bayesian linear regression on training set
-# Create regressors
-regressors_slda = hcat(ones(size(train_data.x,1)),train_data.x)
-# No fixed effect, no batch
-blr_ω, blr_σ2, blr_ω_post, blr_σ2_post = BLR_Gibbs(residuals_slda, regressors_slda,
-    m_0 = slda2opts.μ_ω, σ_ω = slda2opts.σ_ω, a_0 = slda2opts.a_0, b_0 = slda2opts.b_0,
-    iteration = slda2opts.M_iters)
+    slda2_TE = blr_ω[3]
 
-slda2_TE = blr_ω[3]
+    TE_Krobustness_df[:,"sLDA_K"*string(K)] = sort(blr_ω_post[3,:])
 
-TE_post_df[:,"sLDA"] = sort(blr_ω_post[3,:])
+end
+
+
+
+
+"""
+Export estimated treatment effects
+"""
+
+CSV.write("data/semisynth_booking/TE_Krobustness.csv",TE_Krobustness_df)
+
+#TE_Krobustness_df = CSV.read("data/semisynth_booking/TE_Krobustness.csv",DataFrame)
+
+scholar_CVEM_df = CSV.read("data/semisynth_booking/scholar/semisynth_booking_scholar_regweight_bootstrap_cv5050.csv", DataFrame)
+sort!(scholar_CVEM_df, :Column1)
+
+
+scholar_df = CSV.read("data/semisynth_booking/scholar/semisynth_booking_scholar_regweight_bootstrap_noCV.csv", DataFrame)
+sort!(scholar_df, :Column1)
+
+
+"""
+Plot treatment effects
+"""
+## Identify columns for each model
+NoText_cols = occursin.("NoText",names(TE_Krobustness_df))
+BTR_cols = occursin.("BTR_noCVEM",names(TE_Krobustness_df))
+BTR_CVEM_cols = occursin.("BTR_CVEM",names(TE_Krobustness_df))
+LDA_cols = occursin.("LDA_",names(TE_Krobustness_df)) .& .!(occursin.("s",names(TE_Krobustness_df)))
+sLDA_cols = occursin.("sLDA_",names(TE_Krobustness_df))
+
+## Function to plot estimate with ccredible intervals
+est_df = TE_Krobustness_df
+cols = NoText_cols
+label = "No Text LR"
+est_color = :grey
+function plot_estimates(est_df, Ks, label, cols, est_color)
+    med_row = Int(nrow(est_df)/2)
+    low_row = Int(round(nrow(est_df)*0.025,digits = 0))
+    high_row = Int(round(nrow(est_df)*0.975, digits = 0))
+
+    if sum(cols) == 1
+        med_ests = repeat(Array(est_df[med_row, cols]), length(Ks))
+        upper_ests = repeat(Array(est_df[high_row, cols]), length(Ks))
+        lower_ests = repeat(Array(est_df[low_row, cols]), length(Ks))
+    else
+        med_ests = Array(est_df[med_row, cols])
+        upper_ests = Array(est_df[high_row, cols])
+        lower_ests = Array(est_df[low_row, cols])
+    end
+
+    plot!(Ks, med_ests, color = est_color, label = label)
+    scatter!(Ks, med_ests, color = est_color, label = "")
+    plot!(Ks, med_ests, ribbon=(upper_ests.- med_ests, med_ests.- lower_ests),
+        color = est_color, label = "", fillalpha = 0.5)
+
+end
+
+
+model_names = ["BTR (no CVEM)","BTR (CVEM)", "LDA", "sLDA", "NoText BLR"]
+nmodels = length(model_names)
+plt1 = plot(legend = false, xlim = (0,maximum(Ks)+2), ylim = (0.5, 2.5),
+    xlabel = "Number of Topics", ylabel = "Estimate Treatment Effect",
+    title = "Booking semi-synth")
+plot!([0.,(Float64(maximum(Ks))+2.0)],[1.,1.], linestyle = :dash,color =:red,
+    label = "Ground truth", legend = :topright)
+# Add various model estimates
+plot_estimates(TE_Krobustness_df, Ks, "No Text LR", NoText_cols, :grey)
+plot_estimates(TE_Krobustness_df, Ks, "MBTR", BTR_cols, :blue)
+plot_estimates(TE_Krobustness_df, Ks, "MBTR (CVEM)", BTR_CVEM_cols, :lightblue)
+plot_estimates(TE_Krobustness_df, Ks, "LDA", LDA_cols, :green)
+plot_estimates(TE_Krobustness_df, Ks, "sLDA", sLDA_cols, :orange)
+# Add scholar results
+plot!([5,10,20,30,50], scholar_df.w1_median, color = :pink, label = "SCHOLAR")
+scatter!([5,10,20,30,50], scholar_df.w1_median, color = :pink, label = "")
+plot!([5,10,20,30,50], scholar_df.w1_median, ribbon=(scholar_df.w1_upper.-
+    scholar_df.w1_median, scholar_df.w1_median.- scholar_df.w1_lower),
+    color = :pink, label = "", fillalpha = 0.5)
+
+plot!([5,10,20,30,50], scholar_CVEM_df.w1_median, color = :purple, label = "SCHOLAR (CV)")
+scatter!([5,10,20,30,50], scholar_CVEM_df.w1_median, color = :purple, label = "")
+plot!([5,10,20,30,50], scholar_CVEM_df.w1_median, ribbon=(scholar_CVEM_df.w1_upper.-
+    scholar_CVEM_df.w1_median, scholar_CVEM_df.w1_median.- scholar_CVEM_df.w1_lower),
+    color = :purple, label = "", fillalpha = 0.5)
+
+plot!(size = (500,400))
+
+
+savefig("figures/semisynth/Booking_TEs.pdf")
+
+
+
 
 
 
@@ -395,6 +493,7 @@ TE_post_df[:,"sLDA"] = sort(blr_ω_post[3,:])
 """
 Plot treatment effects
 """
+
 nmodels = 5
 model_names = ["BTR (no CVEM)","BTR (CVEM)", "LDA", "sLDA", "NoText BLR"]
 plt1 = plot(legend = false, ylim = (0,nmodels+1), xlim = (0., 2.0),

@@ -246,7 +246,7 @@ btrmodel = BTRModel(crps = btrcrps_tr, options = btropts)
 
 ## Estimate BTR with EM-Gibbs algorithm
 btropts.CVEM = :none
-btropts.CVEM_split = 0.5
+btropts.CVEM_split = 0.7
 btrmodel = BTRemGibbs(btrmodel)
 
 
@@ -491,6 +491,30 @@ plt = synth_data_plot(bpslda2_β, ω_bpslda2_post, true_ω = ω_true,
     ticksize = 8, labelsize = 12, plot_htmp = false, xlim = (-1.75, 1.5))
 plot!(size = (250,250))
 if save_files; savefig("figures/synth_BTR/synth_BPsLDA_LR.pdf"); end;
+
+
+
+"""
+SCHOLAR estimates
+"""
+
+scholar_CV_df = CSV.read("data/synth_BTR/scholar_regweight_bootstrap.csv", DataFrame)
+
+ω_scholar_post = vcat(scholar_CV_df.z1, scholar_CV_df.z2, scholar_CV_df.z3,
+    scholar_CV_df.x1)
+
+topic_order = [1,2,3]
+plt = synth_data_plot(bpslda2_β, ω_bpslda2_post, true_ω = ω_true,
+    topic_ord = topic_order, plt_title = "SCHOLAR", legend = false,
+    ticksize = 8, labelsize = 12, plot_htmp = false, xlim = (-1.75, 1.5))
+plot!(size = (250,250))
+if save_files; savefig("figures/synth_BTR/synth_SCHOLAR.pdf"); end;
+
+
+
+
+
+
 
 
 
