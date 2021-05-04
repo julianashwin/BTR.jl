@@ -68,7 +68,7 @@ if regenerate_data
     df[:,"av_score"] = (df.Average_Score .- mean(df.Average_Score))./std(df.Average_Score)
 
     ## Word counts
-    #nwords = vec(sum(dtm_sparse.dtm, dims = 2))
+    nwords = vec(sum(dtm_sparse.dtm, dims = 2))
     #pos_list = ["great","good","excel","love","nice"]
     #work_list = ["work","confer","busi","convent"]
     ## Get wordcounts
@@ -85,16 +85,16 @@ if regenerate_data
     #df.work_score[isnan.(df.work_score)] .= 0.
 
     ## Create synthetic target
-    df.synth_y = 1.0.*df.av_score + 1.0.*df.Leisure +
+    df.synth_y = 1.0.*df.av_score - 0.5*df.Leisure +
         10.0.*df.pos_prop + 0.1.*randn(nrow(df))
 
-    display(cor(hcat(df.Leisure, df.pos_prop, df.pos_score, nwords)))
+    display(cor(hcat(df.Leisure, df.pos_prop, df.sentiment, nwords)))
 
     ## Export
     #CSV.write("data/booking_semisynth_sample.csv", df)
 end
 
-display(cor(hcat(df.Leisure, df.sentiment, df.pos_prop, df.synth_y)))
+display(cor(hcat(df.Leisure, df.av_score, df.pos_prop, df.synth_y)))
 
 
 
@@ -202,35 +202,9 @@ TE_post_df = DataFrame(NoText_reg = sort(blr_notext_coeffs_post[3,:]))
 """
 Estimate BTR without CVEM
 """
-## Options without CVEM
-btropts_noCVEM = deepcopy(opts)
-btropts_noCVEM.CVEM = :none
-btropts_noCVEM.CVEM_split = 0.5
-## Include x regressors by changing the options
-btropts_noCVEM.xregs = [1,2]
-btropts_noCVEM.interactions = Array{Int64,1}([])
-## Initialise BTRModel object
-btrcrps_tr = create_btrcrps(all_data, btropts_noCVEM.ntopics)
-btrmodel_noCVEM = BTRModel(crps = btrcrps_tr, options = btropts_noCVEM)
-## Estimate BTR with EM-Gibbs algorithm
-btrmodel_noCVEM = BTRemGibbs(btrmodel_noCVEM)
-
-
-
-## Plot results
-BTR_plot(btrmodel_noCVEM.β, btrmodel_noCVEM.ω_post, btrmodel_noCVEM.crps.vocab,
-    plt_title = "Booking BTR (No CVEM)", fontsize = 10, nwords = 10, title_size = 10)
-if save_files; savefig("figures/Booking_BTR/Booking_BTR.pdf"); end;
-
-btr_TE = btrmodel_noCVEM.ω[btropts_noCVEM.ntopics+2]
-btr_pplxy = btrmodel_noCVEM.pplxy
-
-TE_post_df[:,"BTR_noCVEM"] = sort(btrmodel_noCVEM.ω_post[btropts_noCVEM.ntopics+2,:])
-
-
 ## Repeat for many K
 TE_Krobustness_df = DataFrame(NoText_reg = sort(blr_notext_coeffs_post[3,:]))
-Ks = [2,3,4,5,6,7,8,9,10,15,20,25,30,40,50]
+Ks = [2,5,10,15,20,25,30,40,50]
 for K in Ks
     display("Estimating with "*string(K)*" topics")
     btropts_noCVEM = deepcopy(opts)
@@ -253,34 +227,6 @@ plot(Ks, mean_TEs, title = "Booking semi-synth, without CVEM")
 """
 Estimate BTR with CVEM
 """
-## Options without CVEM
-btropts_CVEM = deepcopy(opts)
-btropts_CVEM.CVEM = :obs
-btropts_CVEM.CVEM_split = 0.5
-btropts_CVEM.mse_conv = 2
-## Include x regressors by changing the options
-btropts_CVEM.xregs = [1,2]
-btropts_CVEM.interactions = Array{Int64,1}([])
-## Initialise BTRModel object
-btrcrps_tr = create_btrcrps(all_data, btropts_CVEM.ntopics)
-btrmodel_CVEM = BTRModel(crps = btrcrps_tr, options = btropts_CVEM)
-## Estimate BTR with EM-Gibbs algorithm
-btrmodel_CVEM = BTRemGibbs(btrmodel_CVEM)
-
-
-
-## Plot results
-BTR_plot(btrmodel_CVEM.β, btrmodel_CVEM.ω_post, btrmodel_CVEM.crps.vocab,
-    plt_title = "Booking BTR (CVEM)", fontsize = 10, nwords = 10, title_size = 10)
-if save_files; savefig("figures/Booking_BTR/Booking_BTR.pdf"); end;
-
-btr_TE = btrmodel_CVEM.ω[btropts_CVEM.ntopics+2]
-btr_pplxy = btrmodel_CVEM.pplxy
-
-TE_post_df[:,"BTR_CVEM"] = sort(btrmodel_CVEM.ω_post[btropts_CVEM.ntopics+2,:])
-
-
-
 ## Repeat for many K
 for K in Ks
     display("Estimating with "*string(K)*" topics")
@@ -306,34 +252,6 @@ Estimate 2 stage LDA then Bayesian Linear Regression (BLR)
     In the synthetic data this does about as well as BTR because the
     text is generated from an LDA model.
 """
-## Use the same options as the BTR, but might want to tweak the number of iterations as there's only one step
-ldaopts = deepcopy(opts)
-ldaopts.fullGibbs_iters = 1000
-ldaopts.fullGibbs_thinning = 2
-ldaopts.burnin = 50
-## Initialise model (re-initialise the corpora to start with randomised assignments)
-ldacrps_tr = create_btrcrps(all_data, ldaopts.ntopics)
-ldamodel = BTRModel(crps = ldacrps_tr, options = ldaopts)
-## Estimate LDA model on full training set
-ldamodel  = LDAGibbs(ldamodel)
-
-## Bayesian linear regression on training set
-blr_ω, blr_σ2, blr_ω_post, blr_σ2_post = BLR_Gibbs(ldamodel.y, ldamodel.regressors,
-    m_0 = ldaopts.μ_ω, σ_ω = ldaopts.σ_ω, a_0 = ldaopts.a_0, b_0 = ldaopts.b_0,
-    iteration = ldaopts.M_iters)
-ldamodel.ω = blr_ω
-ldamodel.ω_post = blr_ω_post
-
-lda_TE = ldamodel.ω[ldaopts.ntopics+2]
-
-## Plot results
-BTR_plot(ldamodel.β, ldamodel.ω_post, ldamodel.crps.vocab,
-    plt_title = "Booking LDA", fontsize = 10, nwords = 10, title_size = 10)
-if save_files; savefig("figures/Booking_BTR/Booking_LDA.pdf"); end;
-
-
-TE_post_df[:,"LDA"] = sort(ldamodel.ω_post[ldaopts.ntopics+2,:])
-
 ## Repeat for many K
 for K in Ks
     display("Estimating with "*string(K)*" topics")
@@ -402,8 +320,9 @@ end
 """
 Export estimated treatment effects
 """
-
-CSV.write("data/semisynth_booking/TE_Krobustness.csv",TE_Krobustness_df)
+if save_files
+    #CSV.write("data/semisynth_booking/TE_Krobustness.csv",TE_Krobustness_df)
+end
 
 #TE_Krobustness_df = CSV.read("data/semisynth_booking/TE_Krobustness.csv",DataFrame)
 
@@ -467,15 +386,15 @@ plot_estimates(TE_Krobustness_df, Ks, "MBTR (CVEM)", BTR_CVEM_cols, :lightblue)
 plot_estimates(TE_Krobustness_df, Ks, "LDA", LDA_cols, :green)
 plot_estimates(TE_Krobustness_df, Ks, "sLDA", sLDA_cols, :orange)
 # Add scholar results
-plot!([5,10,20,30,50], scholar_df.w1_median, color = :pink, label = "SCHOLAR")
-scatter!([5,10,20,30,50], scholar_df.w1_median, color = :pink, label = "")
-plot!([5,10,20,30,50], scholar_df.w1_median, ribbon=(scholar_df.w1_upper.-
+plot!([2,5,10,15,20,25,30,40,50], scholar_df.w1_median, color = :pink, label = "SCHOLAR")
+scatter!([2,5,10,15,20,25,30,40,50], scholar_df.w1_median, color = :pink, label = "")
+plot!([2,5,10,15,20,25,30,40,50], scholar_df.w1_median, ribbon=(scholar_df.w1_upper.-
     scholar_df.w1_median, scholar_df.w1_median.- scholar_df.w1_lower),
     color = :pink, label = "", fillalpha = 0.5)
 
-plot!([5,10,20,30,50], scholar_CVEM_df.w1_median, color = :purple, label = "SCHOLAR (CV)")
-scatter!([5,10,20,30,50], scholar_CVEM_df.w1_median, color = :purple, label = "")
-plot!([5,10,20,30,50], scholar_CVEM_df.w1_median, ribbon=(scholar_CVEM_df.w1_upper.-
+plot!([2,5,10,15,20,25,30,40,50], scholar_CVEM_df.w1_median, color = :purple, label = "SCHOLAR (CV)")
+scatter!([2,5,10,15,20,25,30,40,50], scholar_CVEM_df.w1_median, color = :purple, label = "")
+plot!([2,5,10,15,20,25,30,40,50], scholar_CVEM_df.w1_median, ribbon=(scholar_CVEM_df.w1_upper.-
     scholar_CVEM_df.w1_median, scholar_CVEM_df.w1_median.- scholar_CVEM_df.w1_lower),
     color = :purple, label = "", fillalpha = 0.5)
 

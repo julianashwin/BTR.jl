@@ -213,31 +213,63 @@ blr_coeffs = Array{Float64,1}(vec(mean(blr_notext_coeffs_post, dims = 2)))
 
 notext_TE = blr_coeffs[3]
 
-TE_post_df = DataFrame(NoText_reg = sort(blr_notext_coeffs_post[3,:]))
-TE_Krobustness_df = DataFrame(NoText_reg = sort(blr_notext_coeffs_post[3,:]))
 
+"""
+Dataframes to fill
+"""
+## Settings
+nruns = 20
+opts.M_iters = 2500
+Ks = [5,10,20,30,50]
+
+## No text regression as baseline benchmark
+blr_coeffs, blr_σ2, blr_notext_coeffs_post, σ2_post = BLR_Gibbs(all_data.y, regressors_notext,
+    iteration = opts.M_iters, m_0 = opts.μ_ω, σ_ω = opts.σ_ω, a_0 = opts.a_0, b_0 = opts.b_0)
+
+## Dataframe with all samples across multiple runs
+TE_Krobustness_df = DataFrame(NoText_reg = sort(repeat(blr_notext_coeffs_post[3,:], nruns)))
+for k in Ks
+    TE_Krobustness_df[:,Symbol("BTR_noCVEM_K"*string(k))] .= 0.
+end
+## Dataframe with just median across multiple runs
+TE_Krobustness_medians_df = DataFrame(run = 1:nruns)
+for k in Ks
+    TE_Krobustness_medians_df[:,Symbol("BTR_noCVEM_K"*string(k))] .= 0.
+end
 
 
 
 """
 Estimate BTR without CVEM
 """
+## Topics
 
-Ks = [5,10,20,30,50]
-for K in Ks
-    display("Estimating BTR without CVEM with "*string(K)*" topics")
-    btropts_noCVEM = deepcopy(opts)
-    btropts_noCVEM.CVEM = :none
-    btropts_noCVEM.ntopics = K
-    btropts_noCVEM.mse_conv = 2
+for nn in 1:nruns
+    for K in Ks
+        display("Estimating BTR without CVEM with "*string(K)*" topics")
+        btropts_noCVEM = deepcopy(opts)
+        btropts_noCVEM.CVEM = :none
+        btropts_noCVEM.ntopics = K
+        btropts_noCVEM.mse_conv = 2
 
-    btrcrps_tr = create_btrcrps(all_data, btropts_noCVEM.ntopics)
-    btrmodel_noCVEM = BTRModel(crps = btrcrps_tr, options = btropts_noCVEM)
-    ## Estimate BTR with EM-Gibbs algorithm
-    btrmodel_noCVEM = BTRemGibbs(btrmodel_noCVEM)
+        btrcrps_tr = create_btrcrps(all_data, btropts_noCVEM.ntopics)
+        btrmodel_noCVEM = BTRModel(crps = btrcrps_tr, options = btropts_noCVEM)
 
-    ## Save posterior dist of treatment effect
-    TE_Krobustness_df[:,"BTR_noCVEM_K"*string(K)] = sort(btrmodel_noCVEM.ω_post[btropts_noCVEM.ntopics+2,:])
+        ## Estimate BTR with EM-Gibbs algorithm
+        btrmodel_noCVEM = BTRemGibbs(btrmodel_noCVEM)
+
+        ## Save posterior dist of treatment effect
+        obs = (1+((nn-1)*opts.M_iters)):(nn*opts.M_iters)
+        TE_Krobustness_df[obs,"BTR_noCVEM_K"*string(K)] = sort(btrmodel_noCVEM.ω_post[btropts_noCVEM.ntopics+2,:])
+        # Save median of treatment effect estimate
+        TE_Krobustness_medians_df[nn,Symbol("BTR_noCVEM_K"*string(K))] =
+            median(btrmodel_noCVEM.ω_post[btropts_noCVEM.ntopics+2,:])
+    end
+
+    CSV.write("data/semisynth_yelp/TE_MBTR_post_gamma"*string(γ_1)*".csv",
+        TE_Krobustness_df)
+    CSV.write("data/semisynth_yelp/TE_MBTR_median_gamma"*string(γ_1)*".csv",
+        TE_Krobustness_medians_df)
 end
 
 #mean_TEs = vec(mean(Matrix(TE_Krobustness_df[:,(2:(length(Ks)+1))]), dims = 1))

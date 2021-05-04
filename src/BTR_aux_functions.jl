@@ -49,27 +49,44 @@ end
 """
 Function that computes group level means for 2d or 1d array
 """
-function group_mean(x::Array{Float64,2},groups::Array{Int64,1})
+function group_mean(x::Array{Float64,2},groups::Array{Int64,1}; same_length = false)
     @assert size(x,1) == length(groups) "Variable and Group vectors must be same length"
     group_order = unique(groups)
-    x_new = zeros(length(group_order),size(x,2))
     ii=1
-    for gg in group_order
-        idxs = (groups.==gg)
-        x_new[ii,:] .= vec(mean(x[idxs,:],dims=1))
-        ii+=1
+    if same_length
+        x_new = zeros(size(x))
+        for gg in group_order
+            idxs = (groups.==gg)
+            x_new[idxs,:] .= vec(mean(x[idxs,:],dims=1))
+        end
+
+    else
+        x_new = zeros(length(group_order),size(x,2))
+        for gg in group_order
+            idxs = (groups.==gg)
+            x_new[ii,:] .= vec(mean(x[idxs,:],dims=1))
+            ii+=1
+        end
     end
     return x_new
 end
-function group_mean(x::Array{Float64,1},groups::Array{Int64,1})
+function group_mean(x::Array{Float64,1},groups::Array{Int64,1}; same_length = false)
     @assert size(x,1) == length(groups) "Variable and Group vectors must be same length"
     group_order = unique(groups)
-    x_new = zeros(length(group_order))
     ii=1
-    for gg in group_order
-        idxs = (groups.==gg)
-        x_new[ii,:] .= mean(x[idxs,:])
-        ii+=1
+    if same_length
+        x_new = zeros(size(x))
+        for gg in group_order
+            idxs = (groups.==gg)
+            x_new[idxs,:].= mean(x[idxs,:])
+        end
+    else
+        x_new = zeros(length(group_order))
+        for gg in group_order
+            idxs = (groups.==gg)
+            x_new[ii,:] .= mean(x[idxs,:])
+            ii+=1
+        end
     end
     return x_new
 end
