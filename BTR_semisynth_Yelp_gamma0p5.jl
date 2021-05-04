@@ -246,7 +246,7 @@ Estimate BTR without CVEM
 # Multiple runs for each K
 for nn in 1:nruns
     for K in Ks
-        display("Estimating BTR without CVEM with "*string(K)*" topics")
+        display("Estimating BTR without CVEM with "*string(K)*" topics for the "*string(nn)*"th time")
         btropts_noCVEM = deepcopy(opts)
         btropts_noCVEM.CVEM = :none
         btropts_noCVEM.ntopics = K
