@@ -52,7 +52,8 @@ function sentimentscore(text::Array{String,1}, dicts::NamedTuple)
     total_counts::Array{Int64,1} = vec(sum(dtm_docs.dtm, dims = 2))
     # Compute and standardise sentiment_score
     sentiment_score::Array{Float64,1} = vec((positive_counts .- negative_counts)./(total_counts))
-    sentiment_score = (sentiment_score.-mean(sentiment_score))./std(sentiment_score)
+    sentiment_score = (sentiment_score.-mean(filter(!isnan, sentiment_score)))./
+        std(filter(!isnan, sentiment_score))
 
     return sentiment_score
 end

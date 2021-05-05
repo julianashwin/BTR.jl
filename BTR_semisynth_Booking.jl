@@ -91,7 +91,7 @@ if regenerate_data
     display(cor(hcat(df.Leisure, df.pos_prop, df.sentiment, nwords)))
 
     ## Export
-    #CSV.write("data/booking_semisynth_sample.csv", df)
+    CSV.write("data/booking_semisynth_sample_v2.csv", df)
 end
 
 display(cor(hcat(df.Leisure, df.av_score, df.pos_prop, df.synth_y)))
@@ -200,6 +200,60 @@ TE_post_df = DataFrame(NoText_reg = sort(blr_notext_coeffs_post[3,:]))
 
 
 """
+Dataframes to fill
+"""
+## Settings
+nruns = 20
+opts.M_iters = 2500
+Ks = [2,5,10,15,20,25,30,40,50]
+
+## No text regression as baseline benchmark
+blr_coeffs, blr_σ2, blr_notext_coeffs_post, σ2_post = BLR_Gibbs(all_data.y, regressors_notext,
+    iteration = opts.M_iters, m_0 = opts.μ_ω, σ_ω = opts.σ_ω, a_0 = opts.a_0, b_0 = opts.b_0)
+
+## Dataframe with all samples across multiple runs
+TE_Krobustness_df = DataFrame(NoText_reg = sort(repeat(blr_notext_coeffs_post[3,:], nruns)))
+for k in Ks
+    TE_Krobustness_df[:,Symbol("BTR_noCVEM_K"*string(k))] .= 0.
+end
+## Dataframe with just median across multiple runs
+TE_Krobustness_medians_df = DataFrame(run = 1:nruns)
+for k in Ks
+    TE_Krobustness_medians_df[:,Symbol("BTR_noCVEM_K"*string(k))] .= 0.
+end
+
+
+"""
+Estimate BTR without CVEM
+"""
+## Topics
+for nn in 1:nruns
+    for K in Ks
+        display("Estimating BTR without CVEM with "*string(K)*" topics for the "*string(nn)*"th time")
+        btropts_noCVEM = deepcopy(opts)
+        btropts_noCVEM.CVEM = :none
+        btropts_noCVEM.ntopics = K
+        btropts_noCVEM.mse_conv = 2
+
+        btrcrps_tr = create_btrcrps(all_data, btropts_noCVEM.ntopics)
+        btrmodel_noCVEM = BTRModel(crps = btrcrps_tr, options = btropts_noCVEM)
+
+        ## Estimate BTR with EM-Gibbs algorithm
+        btrmodel_noCVEM = BTRemGibbs(btrmodel_noCVEM)
+
+        ## Save posterior dist of treatment effect
+        obs = (1+((nn-1)*opts.M_iters)):(nn*opts.M_iters)
+        TE_Krobustness_df[obs,"BTR_noCVEM_K"*string(K)] = sort(btrmodel_noCVEM.ω_post[btropts_noCVEM.ntopics+2,:])
+        # Save median of treatment effect estimate
+        TE_Krobustness_medians_df[nn,Symbol("BTR_noCVEM_K"*string(K))] =
+            median(btrmodel_noCVEM.ω_post[btropts_noCVEM.ntopics+2,:])
+    end
+
+    CSV.write("data/semisynth_booking/TE_MBTR_post.csv", TE_Krobustness_df)
+    CSV.write("data/semisynth_booking/TE_MBTR_median.csv", TE_Krobustness_medians_df)
+end
+
+"""
 Estimate BTR without CVEM
 """
 ## Repeat for many K
@@ -288,6 +342,7 @@ for K in Ks
     display("Estimating sLDA with "*string(K)*" topics")
     ## Set options sLDA on residuals
     slda2opts = deepcopy(opts)
+    slda2opts.CVEM = :none
     slda2opts.xregs = Array{Int64,1}([])
     slda2opts.interactions = Array{Int64,1}([])
 
@@ -374,10 +429,10 @@ end
 
 model_names = ["BTR (no CVEM)","BTR (CVEM)", "LDA", "sLDA", "NoText BLR"]
 nmodels = length(model_names)
-plt1 = plot(legend = false, xlim = (0,maximum(Ks)+2), ylim = (0.5, 2.5),
+plt1 = plot(legend = false, xlim = (0,maximum(Ks)+2), ylim = (-1.0, 0.5),
     xlabel = "Number of Topics", ylabel = "Estimate Treatment Effect",
     title = "Booking semi-synth")
-plot!([0.,(Float64(maximum(Ks))+2.0)],[1.,1.], linestyle = :dash,color =:red,
+plot!([0.,(Float64(maximum(Ks))+2.0)],[-0.5,-0.5], linestyle = :dash,color =:red,
     label = "Ground truth", legend = :topright)
 # Add various model estimates
 plot_estimates(TE_Krobustness_df, Ks, "No Text LR", NoText_cols, :grey)
