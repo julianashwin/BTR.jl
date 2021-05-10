@@ -313,7 +313,7 @@ Estimate 2 stage BLR then supervised LDA (sLDA) on residuals
 """
 ## Residualise first
 blr_ω, blr_σ2, blr_ω_post, blr_σ2_post = BLR_Gibbs(train_data.y, hcat(ones(size(train_data.x,1)),train_data.x),
-    m_0 = ldaopts.μ_ω, σ_ω = ldaopts.σ_ω, a_0 = ldaopts.a_0, b_0 = ldaopts.b_0, iteration = btropts.M_iters)
+    m_0 = btropts.μ_ω, σ_ω = btropts.σ_ω, a_0 = btropts.a_0, b_0 = btropts.b_0, iteration = btropts.M_iters)
 # Get the y residualised on x
 resids_blr_train = train_data.y - hcat(ones(size(train_data.x,1)),train_data.x)*blr_ω
 
@@ -500,12 +500,12 @@ SCHOLAR estimates
 
 scholar_CV_df = CSV.read("data/synth_BTR/scholar_regweight_bootstrap.csv", DataFrame)
 
-ω_scholar_post = vcat(scholar_CV_df.z1, scholar_CV_df.z2, scholar_CV_df.z3,
-    scholar_CV_df.x1)
+ω_scholar_post = Matrix(transpose(cat(hcat(scholar_CV_df.z1), hcat(scholar_CV_df.z2),
+    hcat(scholar_CV_df.z3), hcat(scholar_CV_df.x1), dims = 2)))
 
 topic_order = [1,2,3]
-plt = synth_data_plot(bpslda2_β, ω_bpslda2_post, true_ω = ω_true,
-    topic_ord = topic_order, plt_title = "SCHOLAR", legend = false,
+plt = synth_data_plot(bpslda2_β, ω_scholar_post, true_ω = ω_true,
+    topic_ord = topic_order, plt_title = "R-SCHOLAR", legend = false,
     ticksize = 8, labelsize = 12, plot_htmp = false, xlim = (-1.75, 1.5))
 plot!(size = (250,250))
 if save_files; savefig("figures/synth_BTR/synth_SCHOLAR.pdf"); end;

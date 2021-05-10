@@ -271,6 +271,10 @@ for nn in 1:nruns
         TE_Krobustness_medians_df)
 end
 
+
+for K in Ks
+    TE_Krobustness_df[:,"BTR_noCVEM_K"*string(K)] = sort(TE_Krobustness_df[:,"BTR_noCVEM_K"*string(K)])
+end
 #mean_TEs = vec(mean(Matrix(TE_Krobustness_df[:,(2:(length(Ks)+1))]), dims = 1))
 #plot(Ks, mean_TEs, title = "Yelp semi-synth, without CVEM")
 
@@ -411,12 +415,13 @@ function plot_estimates(est_df, Ks, label, cols, est_color)
         med_ests = Array(est_df[med_row, cols])
         upper_ests = Array(est_df[high_row, cols])
         lower_ests = Array(est_df[low_row, cols])
+
     end
 
-    plot!(Ks, med_ests, color = est_color, label = label)
+    #plot!(Ks, med_ests, color = est_color, label = label)
     scatter!(Ks, med_ests, color = est_color, label = "")
-    plot!(Ks, med_ests, ribbon=(upper_ests.- med_ests, med_ests.- lower_ests),
-        color = est_color, label = "", fillalpha = 0.5)
+    plot!(Ks, med_ests, ribbon=(med_ests.- lower_ests, upper_ests.- med_ests),
+        color = est_color, label = label, fillalpha = 0.5)
 
 end
 

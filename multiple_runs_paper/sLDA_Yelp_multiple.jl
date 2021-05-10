@@ -23,7 +23,7 @@ using Plots, StatsPlots, StatsBase, Plots.PlotMeasures, TableView
 ## Load data
 df = CSV.read("data/yelp_toronto_sample.csv", DataFrame, threaded = false)
 # Check that the variables look sensible
-display(plot(df.date[1:200], df.stars[1:200], label = ["stars"], legend = :bottomleft,xguidefontsize=8))
+display(plot([1:200], df.stars[1:200], label = ["stars"], legend = :bottomleft,xguidefontsize=8))
 
 ## Toggle whether to save the various figures output throughout
 save_files = false
@@ -32,8 +32,8 @@ save_files = false
 Generate a sentiment score from unstemmed documents
 """
 ## Create a sentiment score for each review using the Harvard Inqiurer lists
-df.text = string.(df.text)
-df.sentiment = sentimentscore(df.text, HIV_dicts)
+#df.text = string.(df.text)
+#df.sentiment = sentimentscore(df.text, HIV_dicts)
 ols = lm(@formula(stars ~ sentiment + stars_av_u+ stars_av_b), df)
 display(ols)
 
@@ -208,7 +208,7 @@ end
 
 
 
-nruns = 4
+nruns = 6
 for kk in [100]
     print(join(["\n\n\n",string(kk)," topics\n\n\n"]))
     sldaopts.ntopics = kk
