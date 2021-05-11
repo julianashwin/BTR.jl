@@ -315,8 +315,6 @@ for k in Ks
     TE_Krobustness_medians_df[:,Symbol("LDA_K"*string(k))] .= 0.
 end
 
-
-
 ## Repeat for many K
 for K in Ks
     display("Estimating with "*string(K)*" topics")
@@ -348,6 +346,14 @@ end
 """
 Estimate 2 stage slDA then BLR on residuals
 """
+## New variables
+for k in Ks
+    TE_Krobustness_df[:,Symbol("sLDA_K"*string(k))] .= 0.
+end
+for k in Ks
+    TE_Krobustness_medians_df[:,Symbol("sLDA_K"*string(k))] .= 0.
+end
+
 ## Repeat for many K
 for K in Ks
     display("Estimating sLDA with "*string(K)*" topics")
@@ -374,9 +380,9 @@ for K in Ks
         m_0 = slda2opts.μ_ω, σ_ω = slda2opts.σ_ω, a_0 = slda2opts.a_0, b_0 = slda2opts.b_0,
         iteration = slda2opts.M_iters)
 
-    slda2_TE = blr_ω[3]
+    slda2_TE = blr_ω[2]
 
-    TE_Krobustness_df[:,"sLDA_K"*string(K)] = sort(blr_ω_post[3,:])
+    TE_Krobustness_df[:,"sLDA_K"*string(K)] = sort(blr_ω_post[2,:])
 
 end
 
@@ -387,10 +393,11 @@ end
 Export estimated treatment effects
 """
 if save_files
-    #CSV.write("data/semisynth_booking/TE_Krobustness.csv",TE_Krobustness_df)
+    #CSV.write("data/semisynth_cont_booking/TE_Krobustness.csv",TE_Krobustness_df)
 end
 
 #TE_Krobustness_df = CSV.read("data/semisynth_booking/TE_Krobustness.csv",DataFrame)
+
 
 scholar_CVEM_df = CSV.read("data/semisynth_booking/scholar/semisynth_booking_scholar_regweight_bootstrap_cv5050.csv", DataFrame)
 sort!(scholar_CVEM_df, :Column1)
@@ -406,7 +413,7 @@ Plot treatment effects
 ## Identify columns for each model
 NoText_cols = occursin.("NoText",names(TE_Krobustness_df))
 BTR_cols = occursin.("BTR_noCVEM",names(TE_Krobustness_df))
-BTR_CVEM_cols = occursin.("BTR_CVEM",names(TE_Krobustness_df))
+#BTR_CVEM_cols = occursin.("BTR_CVEM",names(TE_Krobustness_df))
 LDA_cols = occursin.("LDA_",names(TE_Krobustness_df)) .& .!(occursin.("s",names(TE_Krobustness_df)))
 sLDA_cols = occursin.("sLDA_",names(TE_Krobustness_df))
 
@@ -448,7 +455,7 @@ plot!([0.,(Float64(maximum(Ks))+2.0)],[-1.0,-1.0], linestyle = :dash,color =:red
 # Add various model estimates
 plot_estimates(TE_Krobustness_df, Ks, "No Text LR", NoText_cols, :grey)
 plot_estimates(TE_Krobustness_df, Ks, "MBTR", BTR_cols, :blue)
-plot_estimates(TE_Krobustness_df, Ks, "MBTR (CVEM)", BTR_CVEM_cols, :lightblue)
+#plot_estimates(TE_Krobustness_df, Ks, "MBTR (CVEM)", BTR_CVEM_cols, :lightblue)
 plot_estimates(TE_Krobustness_df, Ks, "LDA", LDA_cols, :green)
 plot_estimates(TE_Krobustness_df, Ks, "sLDA", sLDA_cols, :orange)
 # Add scholar results

@@ -373,10 +373,13 @@ end
 Export estimated treatment effects
 """
 
-CSV.write("data/semisynth_yelp/TE_Krobustness_gamma"*string(γ_1)*".csv",
-    TE_Krobustness_df)
+#CSV.write("data/semisynth_yelp/TE_Krobustness_gamma"*string(γ_1)*".csv",
+#    TE_Krobustness_df)
+CSV.write("data/semisynth_yelp/TE_Krobustness_BTRonly_gamma"*string(γ_1)*".csv",
+        TE_Krobustness_df)
 
-#TE_Krobustness_df = CSV.read("data/semisynth_yelp/TE_Krobustness_gamma"*string(γ_1)*".csv",DataFrame)
+
+#TE_Krobustness_df1 = CSV.read("data/semisynth_yelp/TE_Krobustness_gamma"*string(γ_1)*".csv",DataFrame)
 
 scholar_CVEM_df = CSV.read("data/semisynth_yelp/scholar/semisynth_yelp_scholar_regweight_bootstrap_CV5050_gamma"*
     string(γ_1)*".csv", DataFrame)
@@ -393,9 +396,9 @@ Plot treatment effects
 ## Identify columns for each model
 NoText_cols = occursin.("NoText",names(TE_Krobustness_df))
 BTR_cols = occursin.("BTR_noCVEM",names(TE_Krobustness_df))
-BTR_CVEM_cols = occursin.("BTR_CVEM",names(TE_Krobustness_df))
-LDA_cols = occursin.("LDA_",names(TE_Krobustness_df)) .& .!(occursin.("s",names(TE_Krobustness_df)))
-sLDA_cols = occursin.("sLDA_",names(TE_Krobustness_df))
+#BTR_CVEM_cols = occursin.("BTR_CVEM",names(TE_Krobustness_df))
+LDA_cols = occursin.("LDA_",names(TE_Krobustness_df1)) .& .!(occursin.("s",names(TE_Krobustness_df1)))
+sLDA_cols = occursin.("sLDA_",names(TE_Krobustness_df1))
 
 ## Function to plot estimate with ccredible intervals
 est_df = TE_Krobustness_df
@@ -425,20 +428,20 @@ function plot_estimates(est_df, Ks, label, cols, est_color)
 
 end
 
-
+pyplot()
 model_names = ["BTR (no CVEM)","BTR (CVEM)", "LDA", "sLDA", "NoText BLR"]
 nmodels = length(model_names)
 plt1 = plot(legend = false, xlim = (0,maximum(Ks)+2), ylim = (-1.1, 0.0),
     xlabel = "Number of Topics", ylabel = "Estimate Treatment Effect",
-    title = "Yelp semi-synth γ1 = "*string(γ_1))
+    title = "Yelp semi-synth "*raw"$\gamma_1$ = "*string(γ_1))
 plot!([0.,(Float64(maximum(Ks))+2.0)],[-1.,-1.], linestyle = :dash,color =:red,
     label = "Ground truth", legend = :topright)
 # Add various model estimates
 plot_estimates(TE_Krobustness_df, Ks, "No Text LR", NoText_cols, :grey)
-plot_estimates(TE_Krobustness_df, Ks, "MBTR", BTR_cols, :blue)
-plot_estimates(TE_Krobustness_df, Ks, "MBTR (CVEM)", BTR_CVEM_cols, :lightblue)
-plot_estimates(TE_Krobustness_df, Ks, "LDA", LDA_cols, :green)
-plot_estimates(TE_Krobustness_df, Ks, "sLDA", sLDA_cols, :orange)
+plot_estimates(TE_Krobustness_df, Ks, "BTR", BTR_cols, :blue)
+#plot_estimates(TE_Krobustness_df, Ks, "MBTR (CVEM)", BTR_CVEM_cols, :lightblue)
+plot_estimates(TE_Krobustness_df1, Ks, "LDA", LDA_cols, :green)
+plot_estimates(TE_Krobustness_df1, Ks, "sLDA", sLDA_cols, :orange)
 # Add scholar results
 plot!(Ks, scholar_df.w1_median, color = :pink, label = "SCHOLAR")
 scatter!(Ks, scholar_df.w1_median, color = :pink, label = "")
@@ -446,11 +449,11 @@ plot!(Ks, scholar_df.w1_median, ribbon=(scholar_df.w1_upper.-
     scholar_df.w1_median, scholar_df.w1_median.- scholar_df.w1_lower),
     color = :pink, label = "", fillalpha = 0.5)
 
-plot!(Ks, scholar_CVEM_df.w1_median, color = :purple, label = "SCHOLAR (CV)")
-scatter!(Ks, scholar_CVEM_df.w1_median, color = :purple, label = "")
-plot!(Ks, scholar_CVEM_df.w1_median, ribbon=(scholar_CVEM_df.w1_upper.-
-    scholar_CVEM_df.w1_median, scholar_CVEM_df.w1_median.- scholar_CVEM_df.w1_lower),
-    color = :purple, label = "", fillalpha = 0.5)
+#plot!(Ks, scholar_CVEM_df.w1_median, color = :purple, label = "SCHOLAR (CV)")
+#scatter!(Ks, scholar_CVEM_df.w1_median, color = :purple, label = "")
+#plot!(Ks, scholar_CVEM_df.w1_median, ribbon=(scholar_CVEM_df.w1_upper.-
+#    scholar_CVEM_df.w1_median, scholar_CVEM_df.w1_median.- scholar_CVEM_df.w1_lower),
+#    color = :purple, label = "", fillalpha = 0.5)
 
 plot!(legend = false)
 plot!(size = (300,400))

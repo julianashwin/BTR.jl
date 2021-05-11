@@ -421,7 +421,7 @@ function plot_estimates(est_df, Ks, label, cols, est_color)
 
     plot!(Ks, med_ests, color = est_color, label = label)
     scatter!(Ks, med_ests, color = est_color, label = "")
-    plot!(Ks, med_ests, ribbon=(upper_ests.- med_ests, med_ests.- lower_ests),
+    plot!(Ks, med_ests, ribbon=(med_ests.- lower_ests, upper_ests.- med_ests),
         color = est_color, label = "", fillalpha = 0.5)
 
 end
