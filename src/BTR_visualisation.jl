@@ -314,11 +314,11 @@ function synth_data_plot(β::Array{Float64,2}, ω_post::Array{Float64,2};
             xguidefontsize = labelsize, yguidefontsize = labelsize)
     end
     # Coefficient plots
-    yticklabs = vcat([Symbol("Z$i") for i in 1:ntopics],
-        [Symbol("X$i") for i in 1:J])
+    yticklabs = vcat(["Z$i" for i in 1:ntopics],
+        ["X$i" for i in 1:J])
     plt2 = plot(ylim = (0,ncoefs+1), xlim = (cmin, cmax), legend = false,
         xlabel = "Weight", ylabel = "Variable", yticks = (1:ncoefs, yticklabs),
-        xtickfontsize = ticksize,ytickfontsize = ticksize,
+        xtickfontsize = ticksize, ytickfontsize = ticksize,
         xguidefontsize = labelsize, yguidefontsize = labelsize)
     if xlim !=(0.,0.)
         plot!(xlim = xlim)

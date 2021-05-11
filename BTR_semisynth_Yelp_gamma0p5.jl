@@ -430,12 +430,12 @@ end
 
 
 Ks = [5,10,20,30,50]
-
+pyplot()
 model_names = ["BTR (no CVEM)","BTR (CVEM)", "LDA", "sLDA", "NoText BLR"]
 nmodels = length(model_names)
 plt1 = plot(legend = false, xlim = (0,maximum(Ks)+2), ylim = (-1.1, 0.0),
     xlabel = "Number of Topics", ylabel = "Estimate Treatment Effect",
-    title = "Yelp semi-synth γ1 = "*string(γ_1))
+    title = "Yelp semi-synth "*raw"$\gamma_1$ = "*string(γ_1))
 plot!([0.,(Float64(maximum(Ks))+2.0)],[-1.,-1.], linestyle = :dash,color =:red,
     label = "Ground truth", legend = :topright)
 # Add various model estimates

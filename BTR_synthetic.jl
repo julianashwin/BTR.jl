@@ -20,10 +20,10 @@ using StatsPlots, StatsBase, Plots.PlotMeasures, Distributions, Random
 Plotting options
 """
 # This sets the plotting backend: gr() is faster, pyplot() is prettier
-gr()
+pyplot()
 #pyplot()
 #plotly()
-save_files = true # Toggle whether you want to save figures and data as files
+save_files = false # Toggle whether you want to save figures and data as files
 
 """
 Generate some synthetic data
@@ -186,7 +186,7 @@ btropts.α=1.
 btropts.η=1.
 ## BLR priors
 btropts.μ_ω = 0. # coefficient mean
-btropts.σ_ω = 2. # coefficient variance
+btropts.σ_ω = 4. # coefficient variance
 btropts.a_0 = 4. # residual shape: higher moves mean closer to zero
 btropts.b_0 = 0.2 # residual scale: higher is more spread out
 # Plot the prior distribution for residual variance (in case unfamiliar with InverseGamma distributions)
@@ -254,7 +254,7 @@ btrmodel = BTRemGibbs(btrmodel)
 ## Plot results
 topic_order = synth_reorder_topics(btrmodel.β)
 plt = synth_data_plot(btrmodel.β, btrmodel.ω_post, true_ω = ω_true,
-    topic_ord = topic_order, plt_title = "MBTR", legend = false,
+    topic_ord = topic_order, plt_title = "BTR", legend = false,
     ticksize = 8, labelsize = 12, plot_htmp = false, xlim = (-1.75, 1.5))
 plot!(size = (250,250))
 if save_files; savefig("figures/synth_BTR/synth_BTR.pdf"); end;
