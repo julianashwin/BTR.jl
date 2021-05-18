@@ -204,7 +204,7 @@ TE_post_df = DataFrame(NoText_reg = sort(blr_notext_coeffs_post[2,:]))
 Dataframes to fill
 """
 ## Settings
-nruns = 1
+nruns = 20
 opts.M_iters = 2500
 Ks = [2,5,10,15,20,25,30,40,50]
 
@@ -359,7 +359,7 @@ for K in Ks
     display("Estimating sLDA with "*string(K)*" topics")
     ## Set options sLDA on residuals
     slda2opts = deepcopy(opts)
-    slda2opts.CVEM = :none
+    slda2opts.CVEM = :obs
     slda2opts.xregs = Array{Int64,1}([])
     slda2opts.interactions = Array{Int64,1}([])
 
@@ -371,7 +371,7 @@ for K in Ks
     slda2model = BTRemGibbs(slda2model)
 
     ## Identify residuals to train second stage regression
-    residuals_slda = train_data.y .- slda2model.regressors*slda2model.ω
+    residuals_slda = all_data.y .- slda2model.regressors*slda2model.ω
 
     ## Bayesian linear regression on training set
     regressors_slda = hcat(ones(size(train_data.x,1)),train_data.x)

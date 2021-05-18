@@ -375,8 +375,8 @@ Export estimated treatment effects
 
 #CSV.write("data/semisynth_yelp/TE_Krobustness_gamma"*string(γ_1)*".csv",
 #    TE_Krobustness_df)
-CSV.write("data/semisynth_yelp/TE_Krobustness_BTRonly_gamma"*string(γ_1)*".csv",
-        TE_Krobustness_df)
+TE_Krobustness_df = CSV.read("data/semisynth_yelp/TE_Krobustness_BTRonly_gamma"*string(γ_1)*".csv",
+        DataFrame)
 
 
 #TE_Krobustness_df1 = CSV.read("data/semisynth_yelp/TE_Krobustness_gamma"*string(γ_1)*".csv",DataFrame)
@@ -431,9 +431,9 @@ end
 pyplot()
 model_names = ["BTR (no CVEM)","BTR (CVEM)", "LDA", "sLDA", "NoText BLR"]
 nmodels = length(model_names)
-plt1 = plot(legend = false, xlim = (0,maximum(Ks)+2), ylim = (-1.1, 0.0),
+plt1 = plot(legend = false, xlim = (0,maximum(Ks)+2), ylim = (-1.1, 0.2),
     xlabel = "Number of Topics", ylabel = "Estimate Treatment Effect",
-    title = "Yelp semi-synth "*raw"$\gamma_1$ = "*string(γ_1))
+    title = "Yelp "*raw"$\gamma_1$="*string(γ_1))
 plot!([0.,(Float64(maximum(Ks))+2.0)],[-1.,-1.], linestyle = :dash,color =:red,
     label = "Ground truth", legend = :topright)
 # Add various model estimates
@@ -455,7 +455,8 @@ plot!(Ks, scholar_df.w1_median, ribbon=(scholar_df.w1_upper.-
 #    scholar_CVEM_df.w1_median, scholar_CVEM_df.w1_median.- scholar_CVEM_df.w1_lower),
 #    color = :purple, label = "", fillalpha = 0.5)
 
-plot!(legend = false)
+plot!(legend = false, xguidefontsize=16, xtickfontsize = 12,
+    yguidefontsize=16, ytickfontsize = 12, titlefontsize = 16)
 plot!(size = (300,400))
 
 savefig("figures/semisynth/Yelp_gamma"*string(γ_1)*".pdf")

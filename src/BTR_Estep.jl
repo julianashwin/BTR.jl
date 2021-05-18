@@ -130,6 +130,8 @@ function BTREstep(btrmodel::BTRModel)::BTRModel
         next!(prog)
     end ## End of E-step cycle
 
+    btrmodel.Z_bar ./= sum(btrmodel.Z_bar, dims=1)
+
     return btrmodel
 end
 

@@ -15,7 +15,7 @@ Load data and necessary packages
 ## Packages
 using BTR
 using TextAnalysis, DataFrames, CSV, Random, GLM, Distributions
-using Plots, StatsPlots, StatsBase, Plots.PlotMeasures, TableView, GRUtils
+using Plots, StatsPlots, StatsBase, Plots.PlotMeasures, TableView
 
 
 
@@ -381,11 +381,6 @@ for K in Ks
 end
 
 
-scholar_CVEM_df = CSV.read("data/semisynth_yelp/scholar/semisynth_yelp_scholar_regweight_bootstrap_CV5050_gamma"*
-    string(γ_1)*".csv", DataFrame)
-sort!(scholar_CVEM_df, :Column1)
-
-
 scholar_df = CSV.read("data/semisynth_yelp/scholar/semisynth_yelp_scholar_regweight_bootstrap_noCV_gamma"*
     string(γ_1)*".csv", DataFrame)
 sort!(scholar_df, :Column1)
@@ -421,9 +416,9 @@ function plot_estimates(est_df, Ks, label, cols, est_color)
         lower_ests = Array(est_df[low_row, cols])
     end
 
-    plot!(Ks, med_ests, color = est_color, label = label)
-    scatter!(Ks, med_ests, color = est_color, label = "")
-    plot!(Ks, med_ests, ribbon=(med_ests.- lower_ests, upper_ests.- med_ests),
+    Plots.plot!(Ks, med_ests, color = est_color, label = label)
+    Plots.scatter!(Ks, med_ests, color = est_color, label = "")
+    Plots.plot!(Ks, med_ests, ribbon=(med_ests.- lower_ests, upper_ests.- med_ests),
         color = est_color, label = "", fillalpha = 0.5)
 
 end
@@ -433,10 +428,10 @@ Ks = [5,10,20,30,50]
 pyplot()
 model_names = ["BTR (no CVEM)","BTR (CVEM)", "LDA", "sLDA", "NoText BLR"]
 nmodels = length(model_names)
-plt1 = plot(legend = false, xlim = (0,maximum(Ks)+2), ylim = (-1.1, 0.0),
+plt1 = Plots.plot(legend = false, xlim = (0,maximum(Ks)+2), ylim = (-1.1, 0.0),
     xlabel = "Number of Topics", ylabel = "Estimate Treatment Effect",
     title = "Yelp semi-synth "*raw"$\gamma_1$ = "*string(γ_1))
-plot!([0.,(Float64(maximum(Ks))+2.0)],[-1.,-1.], linestyle = :dash,color =:red,
+Plots.plot!([0.,(Float64(maximum(Ks))+2.0)],[-1.,-1.], linestyle = :dash,color =:red,
     label = "Ground truth", legend = :topright)
 # Add various model estimates
 plot_estimates(TE_Krobustness_df1, Ks, "No Text LR", NoText_cols, :grey)
@@ -445,9 +440,9 @@ plot_estimates(TE_Krobustness_df, Ks, "BTR", BTR_cols, :blue)
 plot_estimates(TE_Krobustness_df1, Ks, "LDA", LDA_cols, :green)
 plot_estimates(TE_Krobustness_df1, Ks, "sLDA", sLDA_cols, :orange)
 # Add scholar results
-plot!(Ks, scholar_df.w1_median, color = :pink, label = "SCHOLAR")
-scatter!(Ks, scholar_df.w1_median, color = :pink, label = "")
-plot!(Ks, scholar_df.w1_median, ribbon=(scholar_df.w1_upper.-
+Plots.plot!(Ks, scholar_df.w1_median, color = :pink, label = "rSCHOLAR")
+Plots.scatter!(Ks, scholar_df.w1_median, color = :pink, label = "")
+Plots.plot!(Ks, scholar_df.w1_median, ribbon=(scholar_df.w1_upper.-
     scholar_df.w1_median, scholar_df.w1_median.- scholar_df.w1_lower),
     color = :pink, label = "", fillalpha = 0.5)
 
@@ -457,10 +452,10 @@ plot!(Ks, scholar_df.w1_median, ribbon=(scholar_df.w1_upper.-
 #    scholar_CVEM_df.w1_median, scholar_CVEM_df.w1_median.- scholar_CVEM_df.w1_lower),
 #    color = :purple, label = "", fillalpha = 0.5)
 
-plot!(size = (300,400))
+Plots.plot!(size = (300,400))
 
 
-savefig("figures/semisynth/Yelp_gamma"*string(γ_1)*".pdf")
+Plots.savefig("figures/semisynth/Yelp_gamma"*string(γ_1)*".pdf")
 
 
 

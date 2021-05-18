@@ -100,6 +100,11 @@ Test whether synthetic data gives correct coefficients in OLS regression with tr
 regressors = hcat(Z_bar_all, x)
 ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y)
 mse_true = mean((y .- regressors*ols_coeffs).^2)
+
+blr_coeffs_post, σ2_post = BLR_Gibbs(y, regressors, iteration = btropts.M_iters,
+    m_0 = btropts.μ_ω, σ_ω = btropts.σ_ω, a_0 = btropts.a_0, b_0 = btropts.b_0)
+blr_coeffs = Array{Float64,1}(vec(mean(blr_coeffs_post, dims = 2)))
+
 ## Just the x variables
 regressors = hcat(Z_bar_all)
 ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y)
@@ -108,6 +113,48 @@ mse_nox = mean((y .- regressors*ols_coeffs).^2)
 regressors = hcat(ones(N),x)
 ols_coeffs = inv(transpose(regressors)*regressors)*(transpose(regressors)*y)
 mse_noz = mean((y .- regressors*ols_coeffs).^2)
+
+
+
+"""
+Linear regression with ADAM
+"""
+
+
+using Flux, ProgressMeter
+using Flux.Optimise: update!
+
+N_samps = N
+W0 = Matrix(transpose(hcat(deepcopy(ω_true))))
+X = [cat(Z_bar_all[i,:], x[i,:], dims = 1) for i in 1:N_samps]
+#X = [rand(4) for i in 1:N_samps]
+Y = [y[i] for i in 1:N_samps]
+
+# Model / generate prediction
+predict(x) = W * x
+# Loss function on an example
+function loss(x, y)
+  ypred = predict(x)
+  sum((y .- ypred).^2)
+end
+# Initialize parameters
+W = rand(1,4)
+# Use gradient descent as the optimizer
+optimizer = ADAM(0.05)
+# Store epoch loss
+losses = []
+niters = 50
+prog = Progress(niters, 1)
+for iter in 1:niters
+    Flux.train!(loss, Flux.params(W), zip(X,Y), optimizer)
+    push!(losses, sum(loss.(X,Y)))
+    next!(prog)
+end
+print("ADAM: "*join(string.(round.(W,digits = 4)), ", "))
+print("OLS: "*join(string.(round.(ols_coeffs,digits = 4)), ", "))
+# compare
+println("Loss of true parameters: " * sprintf1("%.2f", fwd(x, y, Wtrue, btrue)))
+println("Training loss of optimised parameters: " * sprintf1("%.2f", fwd(x, y, W, b)))
 
 
 """
