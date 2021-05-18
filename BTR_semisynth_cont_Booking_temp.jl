@@ -456,11 +456,12 @@ for K in Ks
     TE_Krobustness_df[:,"BTR_noCVEM_K"*string(K)] = sort(TE_Krobustness_df[:,"BTR_noCVEM_K"*string(K)])
 end
 
+pyplot()
 model_names = ["BTR (no CVEM)","BTR (CVEM)", "LDA", "sLDA", "NoText BLR"]
 nmodels = length(model_names)
-plt1 = plot(legend = false, xlim = (0,maximum(Ks)+2), ylim = (-1.5, 0.5),
+plt1 = plot(legend = false, xlim = (0,maximum(Ks)+2), ylim = (-1.1, 0.2),
     xlabel = "Number of Topics", ylabel = "Estimate Treatment Effect",
-    title = "Booking semi-synth")
+    title = "Booking")
 plot!([0.,(Float64(maximum(Ks))+2.0)],[-1.0,-1.0], linestyle = :dash,color =:red,
     label = "Ground truth", legend = :topright)
 # Add various model estimates
@@ -477,7 +478,8 @@ plot!(Ks, scholar_df.w1_median, ribbon=(scholar_df.w1_upper.-
     color = :pink, label = "", fillalpha = 0.5)
 
 
-plot!(legend = false)
+plot!(legend = false, xguidefontsize=16, xtickfontsize = 12,
+        yguidefontsize=16, ytickfontsize = 12, titlefontsize = 16)
 plot!(size = (300,400))
 
 
