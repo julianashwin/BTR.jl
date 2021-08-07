@@ -114,7 +114,7 @@ Set priors and estimation optioncs here to be consistent across models
 ## Initialiase estimation options
 btropts = BTROptions()
 ## Number of topics
-btropts.ntopics = 200
+btropts.ntopics = 50
 ## LDA priors
 btropts.α=0.5
 btropts.η=0.01
@@ -283,6 +283,8 @@ slda2model = BTRModel(crps = slda2crps_tr, options = slda2opts)
 ## Estimate sLDA on residuals
 slda2model = BTRemGibbs(slda2model)
 
+slda2_predicts = BTRpredict(slda2crps_ts, slda2model)
+mse_blr_slda = mean((slda2_predicts.y .-slda2_predicts.y_pred).^2)
 ## Plot results
 BTR_plot(slda2model.β, slda2model.ω_post, slda2model.crps.vocab,
     plt_title = "Booking sLDA + BLR", fontsize = 10, nwords = 10, title_size = 10)

@@ -218,7 +218,7 @@ notext_TE = blr_coeffs[3]
 Dataframes to fill
 """
 ## Settings
-nruns = 20
+nruns = 10
 opts.M_iters = 2500
 Ks = [5,10,20,30,50]
 
