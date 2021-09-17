@@ -19,7 +19,12 @@ using BTR
 ## Example files
 This repository contains several example files that demonstrate how to use the package to estimate BTR and other topic models.
 * `BTR_synthetic.jl` runs through an example in which the synthetic dataset used in the paper is generated, prepared for estimation and then a variety of models estimated on it.
-* `BTR_semisynthetic_Booking.jl` and `BTR_semisynthetic_Yelp.jl`
+* `BTR_semisynthetic_Booking.jl` and `BTR_semisynthetic_Yelp.jl` generates the data and estimates treatment effects for the semi-synthetic examples in the paper.
+* `BTR_Booking.jl` and `BTR_Yelp.jl` evaluates out of sample performance of BTR and other sampling-based topic models on customer review datasets.
+* `BTC_synthetic.jl` runs through an example for classification rather than regression with a synthetic dataset. 
+Code for the rSCHOLAR model that is also used as a benchmark can be found in this [repository](https://github.com/MaximilianAhrens/scholar4regression).
+
+
 
 ## Pre-processing
 
