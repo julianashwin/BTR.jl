@@ -65,6 +65,7 @@ if regenerate_data
     df.sentiment = sentimentscore(df.text_clean, HIV_dicts)
     df[:,"pos_prop"] .= df.Review_Total_Positive_Word_Counts./(
         df.Review_Total_Negative_Word_Counts .+ df.Review_Total_Positive_Word_Counts)
+    df.pos_prop = (df.pos_prop.-mean(df.pos_prop))./std(df.pos_prop)
     df[:,"av_score"] = (df.Average_Score .- mean(df.Average_Score))./std(df.Average_Score)
 
     ## Word counts
@@ -85,16 +86,16 @@ if regenerate_data
     #df.work_score[isnan.(df.work_score)] .= 0.
 
     ## Create synthetic target
-    df.synth_y = 1.0.*df.av_score - 0.5*df.Leisure +
-        10.0.*df.pos_prop + 0.1.*randn(nrow(df))
+    df.synth_y = -1.0.*df.av_score +
+        5.0.*df.pos_prop + 0.1.*randn(nrow(df))
 
-    display(cor(hcat(df.Leisure, df.pos_prop, df.sentiment, nwords)))
+    display(cor(hcat(df.synth_y, df.pos_prop, df.av_score)))
 
     ## Export
-    CSV.write("data/booking_semisynth_sample_v2.csv", df)
+    CSV.write("data/booking_semisynth_sample.csv", df)
 end
 
-display(cor(hcat(df.Leisure, df.av_score, df.pos_prop, df.synth_y)))
+display(cor(hcat(df.synth_y, df.av_score, df.pos_prop)))
 
 
 
@@ -104,13 +105,13 @@ display(cor(hcat(df.Leisure, df.av_score, df.pos_prop, df.synth_y)))
 No text regressions
 """
 ## No text
-fm = @formula(synth_y ~ av_score + Leisure)
+fm = @formula(synth_y ~ av_score)
 synth_notext = lm(fm, df)
 display(synth_notext)
 ## No text or other xs
-fm = @formula(synth_y ~ Leisure)
-synth_nox = lm(fm, df)
-display(synth_nox)
+fm = @formula(synth_y ~ av_score + pos_prop)
+synth_full = lm(fm, df)
+display(synth_full)
 
 
 """
@@ -123,7 +124,7 @@ docidx_dtm = df.doc_idx
 D = length(unique(docidx_dtm))
 
 ## Create labels and covariates
-x = Array{Float64,2}(hcat(df.av_score,df.Leisure))
+x = Array{Float64,2}(hcat(df.av_score))
 y = Array{Float64,1}(df.synth_y)
 
 
@@ -179,7 +180,7 @@ opts.mse_conv = 2
 opts.ω_tol = 0.01 # Convergence tolerance for regression coefficients ω
 opts.rel_tol = true # Whether to use a relative convergence criteria rather than just absolute
 
-opts.xregs = [1,2]
+opts.xregs = [1]
 opts.interactions = Array{Int64,1}([])
 
 """
@@ -194,9 +195,9 @@ blr_coeffs, blr_σ2, blr_notext_coeffs_post, σ2_post = BLR_Gibbs(all_data.y, re
     m_0 = opts.μ_ω, σ_ω = opts.σ_ω, a_0 = opts.a_0, b_0 = opts.b_0)
 blr_coeffs = Array{Float64,1}(vec(mean(blr_notext_coeffs_post, dims = 2)))
 
-notext_TE = blr_coeffs[3]
+notext_TE = blr_coeffs[2]
 
-TE_post_df = DataFrame(NoText_reg = sort(blr_notext_coeffs_post[3,:]))
+TE_post_df = DataFrame(NoText_reg = sort(blr_notext_coeffs_post[2,:]))
 
 
 """
@@ -212,7 +213,7 @@ blr_coeffs, blr_σ2, blr_notext_coeffs_post, σ2_post = BLR_Gibbs(all_data.y, re
     iteration = opts.M_iters, m_0 = opts.μ_ω, σ_ω = opts.σ_ω, a_0 = opts.a_0, b_0 = opts.b_0)
 
 ## Dataframe with all samples across multiple runs
-TE_Krobustness_df = DataFrame(NoText_reg = sort(repeat(blr_notext_coeffs_post[3,:], nruns)))
+TE_Krobustness_df = DataFrame(NoText_reg = sort(repeat(blr_notext_coeffs_post[2,:], nruns)))
 for k in Ks
     TE_Krobustness_df[:,Symbol("BTR_noCVEM_K"*string(k))] .= 0.
 end
@@ -243,14 +244,14 @@ for nn in 1:nruns
 
         ## Save posterior dist of treatment effect
         obs = (1+((nn-1)*opts.M_iters)):(nn*opts.M_iters)
-        TE_Krobustness_df[obs,"BTR_noCVEM_K"*string(K)] = sort(btrmodel_noCVEM.ω_post[btropts_noCVEM.ntopics+2,:])
+        TE_Krobustness_df[obs,"BTR_noCVEM_K"*string(K)] = sort(btrmodel_noCVEM.ω_post[btropts_noCVEM.ntopics+1,:])
         # Save median of treatment effect estimate
         TE_Krobustness_medians_df[nn,Symbol("BTR_noCVEM_K"*string(K))] =
-            median(btrmodel_noCVEM.ω_post[btropts_noCVEM.ntopics+2,:])
+            median(btrmodel_noCVEM.ω_post[btropts_noCVEM.ntopics+1,:])
     end
 
-    CSV.write("data/semisynth_booking/TE_MBTR_post.csv", TE_Krobustness_df)
-    CSV.write("data/semisynth_booking/TE_MBTR_median.csv", TE_Krobustness_medians_df)
+    CSV.write("data/semisynth_booking/TE_BTR_post.csv", TE_Krobustness_df)
+    CSV.write("data/semisynth_booking/TE_BTR_median.csv", TE_Krobustness_medians_df)
 end
 
 """
@@ -306,6 +307,14 @@ Estimate 2 stage LDA then Bayesian Linear Regression (BLR)
     In the synthetic data this does about as well as BTR because the
     text is generated from an LDA model.
 """
+## New variables
+for k in Ks
+    TE_Krobustness_df[:,Symbol("LDA_K"*string(k))] .= 0.
+end
+for k in Ks
+    TE_Krobustness_medians_df[:,Symbol("LDA_K"*string(k))] .= 0.
+end
+
 ## Repeat for many K
 for K in Ks
     display("Estimating with "*string(K)*" topics")
@@ -326,7 +335,7 @@ for K in Ks
     ldamodel.ω_post = blr_ω_post
 
 
-    TE_Krobustness_df[:,"LDA_K"*string(K)] = sort(ldamodel.ω_post[ldaopts.ntopics+2,:])
+    TE_Krobustness_df[:,"LDA_K"*string(K)] = sort(ldamodel.ω_post[ldaopts.ntopics+1,:])
 end
 
 
@@ -337,12 +346,20 @@ end
 """
 Estimate 2 stage slDA then BLR on residuals
 """
+## New variables
+for k in Ks
+    TE_Krobustness_df[:,Symbol("sLDA_K"*string(k))] .= 0.
+end
+for k in Ks
+    TE_Krobustness_medians_df[:,Symbol("sLDA_K"*string(k))] .= 0.
+end
+
 ## Repeat for many K
 for K in Ks
     display("Estimating sLDA with "*string(K)*" topics")
     ## Set options sLDA on residuals
     slda2opts = deepcopy(opts)
-    slda2opts.CVEM = :none
+    slda2opts.CVEM = :obs
     slda2opts.xregs = Array{Int64,1}([])
     slda2opts.interactions = Array{Int64,1}([])
 
@@ -354,7 +371,7 @@ for K in Ks
     slda2model = BTRemGibbs(slda2model)
 
     ## Identify residuals to train second stage regression
-    residuals_slda = train_data.y .- slda2model.regressors*slda2model.ω
+    residuals_slda = all_data.y .- slda2model.regressors*slda2model.ω
 
     ## Bayesian linear regression on training set
     regressors_slda = hcat(ones(size(train_data.x,1)),train_data.x)
@@ -363,9 +380,9 @@ for K in Ks
         m_0 = slda2opts.μ_ω, σ_ω = slda2opts.σ_ω, a_0 = slda2opts.a_0, b_0 = slda2opts.b_0,
         iteration = slda2opts.M_iters)
 
-    slda2_TE = blr_ω[3]
+    slda2_TE = blr_ω[2]
 
-    TE_Krobustness_df[:,"sLDA_K"*string(K)] = sort(blr_ω_post[3,:])
+    TE_Krobustness_df[:,"sLDA_K"*string(K)] = sort(blr_ω_post[2,:])
 
 end
 
@@ -381,6 +398,7 @@ end
 
 #TE_Krobustness_df = CSV.read("data/semisynth_booking/TE_Krobustness.csv",DataFrame)
 
+
 scholar_CVEM_df = CSV.read("data/semisynth_booking/scholar/semisynth_booking_scholar_regweight_bootstrap_cv5050.csv", DataFrame)
 sort!(scholar_CVEM_df, :Column1)
 
@@ -395,7 +413,7 @@ Plot treatment effects
 ## Identify columns for each model
 NoText_cols = occursin.("NoText",names(TE_Krobustness_df))
 BTR_cols = occursin.("BTR_noCVEM",names(TE_Krobustness_df))
-BTR_CVEM_cols = occursin.("BTR_CVEM",names(TE_Krobustness_df))
+#BTR_CVEM_cols = occursin.("BTR_CVEM",names(TE_Krobustness_df))
 LDA_cols = occursin.("LDA_",names(TE_Krobustness_df)) .& .!(occursin.("s",names(TE_Krobustness_df)))
 sLDA_cols = occursin.("sLDA_",names(TE_Krobustness_df))
 
@@ -421,7 +439,7 @@ function plot_estimates(est_df, Ks, label, cols, est_color)
 
     plot!(Ks, med_ests, color = est_color, label = label)
     scatter!(Ks, med_ests, color = est_color, label = "")
-    plot!(Ks, med_ests, ribbon=(med_ests.- lower_ests, upper_ests.- med_ests),
+    plot!(Ks, med_ests, ribbon=(upper_ests.- med_ests, med_ests.- lower_ests),
         color = est_color, label = "", fillalpha = 0.5)
 
 end
@@ -429,15 +447,15 @@ end
 
 model_names = ["BTR (no CVEM)","BTR (CVEM)", "LDA", "sLDA", "NoText BLR"]
 nmodels = length(model_names)
-plt1 = plot(legend = false, xlim = (0,maximum(Ks)+2), ylim = (-1.0, 0.5),
+plt1 = plot(legend = false, xlim = (0,maximum(Ks)+2), ylim = (-1.5, 0.5),
     xlabel = "Number of Topics", ylabel = "Estimate Treatment Effect",
     title = "Booking semi-synth")
-plot!([0.,(Float64(maximum(Ks))+2.0)],[-0.5,-0.5], linestyle = :dash,color =:red,
+plot!([0.,(Float64(maximum(Ks))+2.0)],[-1.0,-1.0], linestyle = :dash,color =:red,
     label = "Ground truth", legend = :topright)
 # Add various model estimates
 plot_estimates(TE_Krobustness_df, Ks, "No Text LR", NoText_cols, :grey)
-plot_estimates(TE_Krobustness_df, Ks, "MBTR", BTR_cols, :blue)
-plot_estimates(TE_Krobustness_df, Ks, "MBTR (CVEM)", BTR_CVEM_cols, :lightblue)
+plot_estimates(TE_Krobustness_df, Ks, "BTR", BTR_cols, :blue)
+#plot_estimates(TE_Krobustness_df, Ks, "BTR (CVEM)", BTR_CVEM_cols, :lightblue)
 plot_estimates(TE_Krobustness_df, Ks, "LDA", LDA_cols, :green)
 plot_estimates(TE_Krobustness_df, Ks, "sLDA", sLDA_cols, :orange)
 # Add scholar results
