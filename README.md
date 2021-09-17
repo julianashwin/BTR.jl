@@ -1,7 +1,7 @@
 # BTR.jl
-Estimate Bayesian Topic Regression models
+A Julia package to estimate Bayesian Topic Regression (BTR) models, as described in Ahrens et al (2021).
 
-## Installing
+## Installion
 
 To install the package, first enter package mode in julia by entering "]". The package can then be installed either directly from GitHub with 
 ```julia
@@ -15,7 +15,11 @@ Once the pakage mode is exited (cmd+c), the package can then be loaded with
 ```julia
 using BTR
 ```
-The `BTR_synthetic.jl` file runs through an example in which a synthetic dataset is generated, prepared for estimation and then a variety of models estimated on it. Some extra explanation on how to change this file for different examples can be found in the sythetic_example.txt file.
+
+## Example files
+This repository contains several example files that demonstrate how to use the package to estimate BTR and other topic models.
+* `BTR_synthetic.jl` runs through an example in which the synthetic dataset used in the paper is generated, prepared for estimation and then a variety of models estimated on it.
+* `BTR_semisynthetic_Booking.jl` and `BTR_semisynthetic_Yelp.jl`
 
 ## Pre-processing
 
