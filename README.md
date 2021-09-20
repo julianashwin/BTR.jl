@@ -28,7 +28,7 @@ Code for the rSCHOLAR model that is also used as a benchmark can be found in thi
 
 ## Pre-processing
 
-Before estimating we need to convert the text-data into a document-term-matrix (DTM) for which we can use the DocumentTermMatrix function from the [TextAnalysis.jl](https://github.com/JuliaText/TextAnalysis.jl) package. 
+Before estimating we need to convert the text-data into a document-term-matrix (DTM) for which we can use the DocumentTermMatrix function from the [TextAnalysis.jl](https://github.com/JuliaText/TextAnalysis.jl) package, and convert the numerical data into appropriate arrays. To ensure that the raw data is in the correct format and to facilitate train-test set division, it is recommended to use the BTRRawData structure as described below
 
 To do this import the documents as an array of strings (stemming, stop-word removal etc. can be done separately or in Julia using the tools described in the [documentation](https://juliatext.github.io/TextAnalysis.jl/documents.html#Preprocessing-Documents-1) for TextAnalysis.jl). Then convert this array of strings into an array of StringDocuments
 ```julia
@@ -51,6 +51,47 @@ dtm_sparse = dtm.dtm
 The response variable `y` and the non-text regression features `x` should be formated as a one and two dimensional array of floats respectively. Optionally, you can also specify the `doc_idx` of each line in the DTM as an array on integers, if there are multiple paragraphs/documents per observation. The dimensionality and order of `x`,`y` and `doc_idx` must match that of `dtm_sparse`.
 
 If you wish to split the sample into training and test sets, this should be done after pre-processing to ensure that the DTM vocabulary is consistent across the two sets.
+
+
+
+
+## Options
+
+* `ntopics::Int64 = 2`:
+* `interactions::Array{Int64,1} = Array{Int64,1}([])`:
+* `xregs::Array{Int64,1} = Array{Int64,1}([])`:
+* `emptydocs::Symbol = :prior`: # can also be set to :zero
+* `interlevel::Symbol = :doc`: # can also be set to :para
+# Estimation options
+* `E_iters::Int64 = 100`:
+* `M_iters::Int64 = 250`:
+* `EM_iters::Int64 = 10`:
+* `fullGibbs_iters::Int64 = 10000`:
+* `fullGibbs_thinning::Int64 = 10`:
+* `burnin::Int64 = 10`:
+* `mse_conv::Int64 = 0`: # compare mse to average of last x observations
+* `ω_tol::Float64 = 0.01`:
+* `rel_tol::Bool = false;`:
+* `CVEM::Symbol = :none`: # can also be set to :obs or :paras
+* `CVEM_split::Float64 = 0.75`:
+# Priors
+* `α::Float64 = 1.`:
+* `η::Float64 = 1.`:
+* `σ_ω::Float64 = 1.`:
+* `μ_ω::Float64 = 0.`:
+* `a_0::Float64 = 0.`:
+* `b_0::Float64 = 0.`:
+# Output options
+*`plot_ω = Bool(true)`: # = false
+
+
+
+## Converting into a BTRCorpus object
+
+
+
+
+
 
 ## Estimation
 
