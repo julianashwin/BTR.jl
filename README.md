@@ -30,6 +30,8 @@ Code for the rSCHOLAR model that is also used as a benchmark can be found in thi
 
 Before estimating we need to convert the text-data into a document-term-matrix (DTM) for which we can use the DocumentTermMatrix function from the [TextAnalysis.jl](https://github.com/JuliaText/TextAnalysis.jl) package, and convert the numerical data into appropriate arrays. To ensure that the raw data is in the correct format and to facilitate train-test set division, it is recommended to use the BTRRawData structure as described below
 
+### Text data
+
 To do this import the documents as an array of strings (stemming, stop-word removal etc. can be done separately or in Julia using the tools described in the [documentation](https://juliatext.github.io/TextAnalysis.jl/documents.html#Preprocessing-Documents-1) for TextAnalysis.jl). Then convert this array of strings into an array of StringDocuments
 ```julia
 docs = StringDocument.(text_clean)
@@ -48,45 +50,73 @@ The estimation function takes the DTM as a `SparseMatrixCSC` object, which can b
 ```julia
 dtm_sparse = dtm.dtm
 ```
-The response variable `y` and the non-text regression features `x` should be formated as a one and two dimensional array of floats respectively. Optionally, you can also specify the `doc_idx` of each line in the DTM as an array on integers, if there are multiple paragraphs/documents per observation. The dimensionality and order of `x`,`y` and `doc_idx` must match that of `dtm_sparse`.
-
+As it is poossible to have multiple documents/paragraphs per observation, we also need to define the document id for each row of the DTM. This document id variable needs to be an array of integers. If the there is one document per observation, this can simply be row ids for the DTM.
+```julia
+docidx_dtm = Array{Int64,1}(1:length(text_clean))
+```
 If you wish to split the sample into training and test sets, this should be done after pre-processing to ensure that the DTM vocabulary is consistent across the two sets.
+
+### Numerical data
+
+The response variable `y` and the non-text regression features `x` should be formated as a one and two dimensional array of floats respectively. 
+```julia
+x = Array{Float64,2}(hcat(df.sentiment,df.stars_av_u, df.stars_av_b))
+y = Array{Float64,1}(df.stars)
+```
+As with the text data, we need to define a document id for these numerical variables as an array of integers.
+```julia
+docidx_vars = df.doc_idx
+```
+
+### BTRRawData and training-test splitting
+
 
 
 
 
 ## Options
 
-* `ntopics::Int64 = 2`:
-* `interactions::Array{Int64,1} = Array{Int64,1}([])`:
-* `xregs::Array{Int64,1} = Array{Int64,1}([])`:
-* `emptydocs::Symbol = :prior`: # can also be set to :zero
-* `interlevel::Symbol = :doc`: # can also be set to :para
-# Estimation options
-* `E_iters::Int64 = 100`:
-* `M_iters::Int64 = 250`:
-* `EM_iters::Int64 = 10`:
-* `fullGibbs_iters::Int64 = 10000`:
-* `fullGibbs_thinning::Int64 = 10`:
-* `burnin::Int64 = 10`:
-* `mse_conv::Int64 = 0`: # compare mse to average of last x observations
-* `ω_tol::Float64 = 0.01`:
-* `rel_tol::Bool = false;`:
-* `CVEM::Symbol = :none`: # can also be set to :obs or :paras
-* `CVEM_split::Float64 = 0.75`:
-# Priors
-* `α::Float64 = 1.`:
-* `η::Float64 = 1.`:
-* `σ_ω::Float64 = 1.`:
-* `μ_ω::Float64 = 0.`:
-* `a_0::Float64 = 0.`:
-* `b_0::Float64 = 0.`:
-# Output options
-*`plot_ω = Bool(true)`: # = false
+A BTROptions object keeps track of the modelling and estimation options, each field has a default as described below. These same options can also be used to estimate unsupervised LDA models, and an equivalent object exists for classification rather than regression. This options object can be initialised at default values with
+```julia
+opts = BTROptions()
+```
+The individual can then be edited individually, for example
+```julia
+opts.ntopics = 20
+opts.xregs = [1,2,3]
+```
+Alternatively, fields can be set when defining the object
+```julia
+opts = BTROptions(ntopics = 20, xregs = [1,2,3])
+```
+Fields and default values for BTROptions are:
+* `ntopics::Int64 = 2`: number of topics (K)
+* `interactions::Array{Int64,1} = Array{Int64,1}([])`: which x variables should be interacted with topic proportions
+* `xregs::Array{Int64,1} = Array{Int64,1}([])`: which x variables to be included in the regression
+* `emptydocs::Symbol = :prior`: how to deal with empty documents, topic proportions can be set to the Dirichlet prior or zero
+* `interlevel::Symbol = :doc`: level at which interactions between x and topic proportions are calculated, can be at the document or paragraph level
+* `E_iters::Int64 = 100`: Number of sampling iterations in E-step that approximates the distribution topic proportions
+* `M_iters::Int64 = 250`: Number of sampling iterations in M-step that approximates the distribution of regression parameters
+* `EM_iters::Int64 = 10`: Maximum number of E-M steps (will stop earlier if convergence reached)
+* `fullGibbs_iters::Int64 = 10000`: Number of iterations under standard Gibbs sampling (without EM), particularly relevant for unsupervised LDA
+* `fullGibbs_thinning::Int64 = 10`: Thinning interval for Gibbs sampling
+* `burnin::Int64 = 10`: Burnin iterations discarded at the beginning of any sampling
+* `mse_conv::Int64 = 0`: Toggle whether M-step MSE is used to assess convergence (if zero then only regression parameters ω used)
+* `ω_tol::Float64 = 0.01`: Convergence tolerance for regression parameters ω
+* `rel_tol::Bool = false;`: Toggle whether convergence tolerance in ω is scaled relative to the size of ω
+* `CVEM::Symbol = :none`: Toggle whether CVEM approach is used; options are :none for no CVEM, :obs to split into E and M step samples at the observation level and :paras to split at the paragraph level
+* `CVEM_split::Float64 = 0.75`: Proportion of observations/paragraphs used in the E-step (to estimate topic proportions) with the remainder used in the M-step (to estimate regression parameters
+* `α::Float64 = 1.`: Dirichlet prior on document-topic distribution
+* `η::Float64 = 1.`: Dirichlet prior on topic-vocabulary distribution
+* `σ_ω::Float64 = 1.`: Variance of Gaussian prior on regression coefficients
+* `μ_ω::Float64 = 0.`: Mean of Gaussian prior on regression coefficients
+* `a_0::Float64 = 0.`: Shape of Inverse-Gamma prior on residual variance
+* `b_0::Float64 = 0.`: Scale of Inverse-Gamma prior on residual variance
+* `plot_ω = Bool(true)`: Toggle whether to plot progress of mse and ω coefficients between E-M steps
 
 
 
-## Converting into a BTRCorpus object
+## Converting BTRRawData into a BTRCorpus object
 
 
 
