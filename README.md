@@ -68,13 +68,6 @@ As with the text data, we need to define a document id for these numerical varia
 docidx_vars = df.doc_idx
 ```
 
-### BTRRawData and training-test splitting
-
-There are two ways to convert data into a BTRRawData structure
-1. Explicitly define from the DTM, id variables, y, vocab and optionally covariates x
-2. Using the `btr_traintestsplit` function
-
-
 ## Options
 
 A BTROptions object keeps track of the modelling and estimation options, each field has a default as described below. These same options can also be used to estimate unsupervised LDA models, and an equivalent object exists for classification rather than regression. This options object can be initialised at default values with
@@ -116,84 +109,43 @@ Fields and default values for BTROptions are:
 * `plot_ω = Bool(true)`: Toggle whether to plot progress of mse and ω coefficients between E-M steps
 
 
+### BTRRawData, training-test splitting and BTRCorpus structures
 
-## Converting BTRRawData into a BTRCorpus object
+In order to estimate a BTR model, the data needs to be converted into a `BRTCorpus` structure. A useful intermediate set here is to first create `BRTRawData` objects, and if necessary split into a training and test set. 
 
-
-
-
+There are two ways to convert data into a BTRRawData structure
+1. Explicitly define from the DTM, id variables, y, vocab and optionally covariates x
+    ```julia 
+    all_data = DocStructs.BTRRawData(dtm_in, docidx_dtm, docidx_vars, y, x, vocab)
+    ```
+2. Using the `btr_traintestsplit` function which creates two BTRRawData Structures, for a test and training set. This takes optional arguments that define the size of the training set relative to the test set, and whether to shuffle observations before splitting. 
+    ```julia
+    train_data, test_data = btr_traintestsplit(dtm_in, docidx_dtm, docidx_vars, y, vocab, x = x, train_split = 0.75, shuffle_obs = false)
+    ```
+Once the data is in `BTRRawData` form, it can be converted into a `BTRCorpus` using the ntopics defined in the options described above. The easiest way to do this is with the `create_btrcorpus` function.
+```julia
+btrcrps_tr = create_btrcrps(train_data, btropts.ntopics)
+```
+This `BTRCorpus` is specific to the number of topics specified, so if you later want to change the number of topics this will have to be reinitialised. The `create_btrcrps` also initialises the topic assignment randomly, with each topic given equal weight. 
 
 
 ## Estimation
 
-The core function for estimation is `BTR_EMGibbs`, which estimates a BTR model with an EM-Gibbs algorithm.
+To estimate a BTR model we combine `BTROptions` and a `BTRCorpus` into a `BTRModel` structure. 
 ```julia
-function BTR_EMGibbs(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
-    y::Array{Float64,1};  x::Array{Float64,2} = zeros(1,1),
-    σ2::Float64 = 0.,
-    α::Float64 =1., η::Float64 = 1., σ_ω::Float64 = 1., μ_ω::Float64 = 0.,
-    a_0::Float64 = 0., b_0::Float64  = 0.,
-    E_iteration::Int = 100, M_iteration::Int = 500, EM_iteration::Int = 10,
-    burnin::Int = 10,
-    topics_init::Array = Array{Main.Lda.Topic,1}(undef, 1),
-    docs_init::Array = Array{Main.Lda.TopicBasedDocument,1}(undef, 1),
-    ω_init::Array{Float64,1} = zeros(1), ω_tol::Float64 = 0.01, rel_tol::Bool = false,
-    interactions::Array{Int64,1}=Array{Int64,1}([]), batch::Bool=false, EM_split::Float64 = 0.75,
-    leave_one_topic_out::Bool=false, plot_ω::Bool = false)
+btrmodel = BTRModel(crps = btrcrps_tr, options = btropts)
 ```
-There are three necessary arguments:
-* `dtm_in::SparseMatrixCSC{Int64,Int64}`: the DTM, as a sparse matrix.
-* `ntopics::Int64`: the number of topics you want the model to have, as an integer.
-* `y::Array{Float64,1}`: the response variable, as a one-dimensional array of floats.
-
-There are then a number of optional key-word arguments:
-* `x::Array{Float64,2}`: the non-text regression features, the default is to run a BTR without any additional regression features (i.e. a supervised LDA).
-* `σ2::Float64`: if specified, the residual variance `σ2` is not estimated but taken as known, if not specified it will be estimated.
-* `α::Float64`: the Dirichlet prior on document-topic proportions `θ`, default is `1.0`.
-* `η::Float64`: the Dirichlet prior on topic-vocabulary proportions `β`, default is `1.0`.
-* `σ_ω::Float64`: variance of Gaussian prior on regression coefficients `ω`, default is `1.0`.
-* `μ_ω::Float64`: mean of Gaussian prior on regression coefficients `ω`, default is `0.0`.
-* `a_0::Float64`: shape of Inverse-Gamma prior on residual variance `σ2`, if not specified the model is estimated without prior on `σ2`.
-* `b_0::Float64`: scale of Inverse-Gamma prior on residual variance `σ2`, if not specified the model is estimated without prior on `σ2`.
-* `E_iteration::Int`: number of iterations per E-step, default is `100`.
-* `M_iteration::Int`: number of iterations per M-step, default is `500`.
-* `EM_iteration::Int`: maximum number of EM-iterations if convergence not reached, default is `10`.
-* `burnin::Int`: number of iterations used as a burnin in Gibbs sampling, default is `10`.
-* `topics_init::Array`: initialised topics as an array of Lda.Topic objects, default is random assignment.
-* `docs_init::Array`: initialised documents as an array of Lda.TopicBasedDocument objects, default is random assignment.
-* `ω_init::Array{Float64,1}`: initialised regression coefficients `ω`, default is `μ_ω`.
-* `ω_tol::Float64`: convergence tolerance for `ω`, default is `0.01`.
-* `rel_tol::Bool`: toggles whether to use relative as well as abosulte convergence tolerance for `ω`, default is`false`.
-* `interactions::Array{Int64,1}`: if specified includes interactions between the topic features and specified columns of `x`, default is no interactions.
-* `batch::Bool`: toggles whether to split training set across E and M steps for Cross-Validation EM as in [Shinozaki and Ostendorf (2007)](https://ieeexplore.ieee.org/abstract/document/4218131?casa_token=IwLvmvoMOYIAAAAA:Jcxp0O3NWH0UBQ4ettMhZ9UviCWJ9JtqhnIVciwNYcxVA_HEJYQS9y4lLqgwPnlb9yS0EDU), default is `false`.
-* `EM_split::Float64`: proportion of sample used in E vs M step, default is `0.75`.
-* `leave_one_topic_out::Bool`: toggles whether to leave one topic out of the regression (not fully implemented yet), default is `false`.
-* `plot_ω::Bool`: toggles whether to plot the evolution of `ω` across EM-iterations, default is `false`.
-
-The output of the function is a NamedTuple with the following elements:
-* `β`: mean of posterior distribution of topic-vocabulary distribution from last E-step.
-* `θ`: mean of posterior distribution of document-topic distribution from last E-step.
-* `Z_bar`: mean topic assignments of posterior distribution from last E-step.
-* `ω`:  mean of posterior distribution for regression coefficients from last M-step. 
-* `Σ`: mean of posterior distribution for regression feature covariance matrix from last M-step (will only be calculated when there **is no** prior on `σ2`).
-* `σ2`: mean of posterior distribution for residual variance.
-* `docs`: document-topic assignments from the last iteration of the last E-step. 
-* `topics`: topic-vocabulary assignments from the last iteration of the last E-step. 
-* `ω_post`: sampled posterior distribution for regression coefficients from last M-step (will only be calculated when there **is** an Inverse-Gamma prior on `σ2`).
-* `σ2_post`: sampled posterior distribution for residual variance from last M-step (will only be calculated when there **is** an Inverse-Gamma prior on `σ2`).
-* `Z_bar_Mstep`: mean topic assignments of posterior distribution for the last M-step (useful is using Cross-Validation AM approach).
-* `ω_iters`: evolution of across EM-iterations, which is used to assess convergence.
-
-So if, for example, you want to estimate estimate a 10 topic BTR model with an `InverseGamma(4.0,4.0)` prior on `σ2` and topic-interaction terms on the second and third columns of `x`, with Cross-Validation EM, this would be:
+We then run the Gibbs-EM estimation algorithm (with the options specified in the `BTROptions` object using `BTRemGibbs`.
 ```julia
-results_btr = BTR_EMGibbs_paras(dtm_sparse, 10, y, x = x, a_0 = 4.0, b_0 = 4.0,
-        interactions = [2,3], batch = true)
+btrmodel = BTRemGibbs(btrmodel)
 ```
-All other priors and estimation options would be set as per the default values described above.
+There are alternative algorithms such as `LDAGibbs` which estimates an LDA model by Gibbs sampling and `BTRfullGibbs` which estimates a BTR model by Gibbs sampling without the EM approach. 
 
   
 ## Prediction
   
+For out-of-sample prediction, we use 
+
 The core function for prediction is `BTR_Gibbs_predict`, which produces predictions for the response variable, given some regression features and previously estimated topic-vocabulary distribution `β` and regression coefficients `ω`.
 ```julia
 function BTR_Gibbs_predict(dtm_in::SparseMatrixCSC{Int64,Int64}, ntopics::Int,
