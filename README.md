@@ -109,6 +109,11 @@ Fields and default values for BTROptions are:
 * `plot_ω = Bool(true)`: Toggle whether to plot progress of mse and ω coefficients between E-M steps
 
 
+
+
+
+## Estimation
+
 ### BTRRawData, training-test splitting and BTRCorpus structures
 
 In order to estimate a BTR model, the data needs to be converted into a `BRTCorpus` structure. A useful intermediate set here is to first create `BRTRawData` objects, and if necessary split into a training and test set. 
@@ -129,7 +134,7 @@ btrcrps_tr = create_btrcrps(train_data, btropts.ntopics)
 This `BTRCorpus` is specific to the number of topics specified, so if you later want to change the number of topics this will have to be reinitialised. The `create_btrcrps` also initialises the topic assignment randomly, with each topic given equal weight. 
 
 
-## Estimation
+### Estimating BTR model
 
 To estimate a BTR model we combine `BTROptions` and a `BTRCorpus` into a `BTRModel` structure. 
 ```julia
@@ -183,21 +188,6 @@ The output of the function is a NamedTuple with the following elements:
 * `topics`: topic-vocabulary assignments from the last iteration of Gibbs sampling. 
 
 
-## Multiple-paragraphs
-
-The functions `BTR_EMGibbs_paras` and `BTR_Gibbs_predict_paras` are analogues of those above which estimate a BTR with multiple paragraphs/documents per observation. The key difference is that the `doc_idx::Array{Int64,1}` key-word argument can be used to associate each row of the DTM with a document. The model is then estimated with each paragraph (i.e. row of the DTM) having and independent `θ` distribution, but with the regression estimated at the document level (as encoded in `doc_idx`. This functionality will eventually be folded into the main `BTR_EMGibbs` and `BTR_Gibbs_predict` functions, but is kept separate for now.
-
-
-## Benchmarking functions
-
-There are functions which estimate several other functions that can be used to benchmark the performance of BTR.
-* `LDA_Gibbs`: estimates a standard LDA by Gibbs sampling.
-* `LDA_Gibbs_predict`: estimates the topic-document distribution `θ` and topic-assignments of documents `Z_bar`, given a topic-vocabulary distribution `β`.
-* `BLR_Gibbs`: estimates a Bayesian Linear Regression with Normal-Inverse-Gamma priors by Gibbs sampling.
-* `BTR_Gibbs`: estimate BTR with pure Gibbs sampling (i.e. without the EM algorithm). This is not ready yet.
-* `wordlist_counts`: calculates word counts for each document given a wordlist and an DTM. Can be used in conjunction with `LM_dicts` and `HIV_dicts` to calculate sentiment scores using the [Loughran and McDonald (2011)](https://www3.nd.edu/~mcdonald/Word_Lists_files/Documentation/Documentation_LoughranMcDonald_MasterDictionary.pdf) and [Harvard Gerenal Inquirer](http://www.wjh.harvard.edu/~inquirer/homecat.htm) dictionaries. 
-  
-  
   
 ## Visualisation
 
