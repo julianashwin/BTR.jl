@@ -70,8 +70,9 @@ docidx_vars = df.doc_idx
 
 ### BTRRawData and training-test splitting
 
-
-
+There are two ways to convert data into a BTRRawData structure
+1. Explicitly define from the DTM, id variables, y, vocab and optionally covariates x
+2. Using the `btr_traintestsplit` function
 
 
 ## Options
