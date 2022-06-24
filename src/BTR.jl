@@ -3,6 +3,7 @@ module BTR
 using SparseArrays, LinearAlgebra, CSV, KernelDensity, Parameters, GLM
 using Random, Distributions, DataFrames, GLM, StatsBase, JSON, JLD2
 using TextAnalysis, Plots, ProgressMeter, ColorSchemes, Plots.PlotMeasures
+using CategoricalArrays
 
 """
 Add JLD to dependencies, update the exports
