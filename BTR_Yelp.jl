@@ -18,7 +18,7 @@ using TextAnalysis, DataFrames, CSV, Random, GLM, Distributions
 using Plots, StatsPlots, StatsBase, Plots.PlotMeasures, TableView
 
 ## Load data
-df = CSV.read("data/yelp_toronto_sample.csv", DataFrame, threaded = false)
+df = CSV.read("data/yelp_toronto_sample.csv", DataFrame, ntasks = 1)
 # Check that the variables look sensible
 display(plot(df.stars[1:200], label = ["stars"], legend = :bottomleft,xguidefontsize=8))
 
