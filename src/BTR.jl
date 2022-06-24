@@ -1,9 +1,9 @@
 module BTR
 
-using SparseArrays, LinearAlgebra, CSV, KernelDensity, Parameters, GLM
-using Random, Distributions, DataFrames, GLM, StatsBase, JSON, JLD2
-using TextAnalysis, Plots, ProgressMeter, ColorSchemes, Plots.PlotMeasures
-using CategoricalArrays
+import SparseArrays, LinearAlgebra, CSV, KernelDensity, Parameters, GLM
+import Random, Distributions, DataFrames, GLM, StatsBase, JSON, JLD2
+import TextAnalysis, Plots, ProgressMeter, ColorSchemes, Plots.PlotMeasures
+import CategoricalArrays
 
 """
 Add JLD to dependencies, update the exports
@@ -11,7 +11,7 @@ Add JLD to dependencies, update the exports
 
 
 # Export structures
-export DocStructs
+export DocStructs, DataFrame
 export BTROptions, BTRModel, BTRPrediction
 export BTCOptions, BTCModel, BTCPrediction
 export AbstractDocument, Document
