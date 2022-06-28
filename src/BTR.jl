@@ -11,7 +11,7 @@ Add JLD to dependencies, update the exports
 
 
 # Export structures
-export DocStructs, DataFrame
+export DocStructs, DataFrame, Parameters
 export BTROptions, BTRModel, BTRPrediction
 export BTCOptions, BTCModel, BTCPrediction
 export AbstractDocument, Document

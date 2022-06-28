@@ -111,7 +111,7 @@ function BTR_plot(β::Array{Float64,2}, ω_post::Array{Float64,2}, vocab::Array{
     #cmin = minimum(ω_post) - 0.25
     #cmax = maximum(ω_post) + 0.25
 
-    plt1 = plot(xguidefontsize=8, left_margin = Int(left_mar)mm, legend = false,
+    plt1 = plot(xguidefontsize=8, legend = false,
         ylim = (0,ntopics+1),
         xlabel = "Coefficient", ylabel = "Topic",
         yticks = (1:ntopics, ytick_words),ytickfontsize=fontsize,
