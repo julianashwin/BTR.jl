@@ -1,7 +1,7 @@
 name = "BTR"
 uuid = "b601ea20-230f-48f2-890c-0c490d5ee5c8"
 authors = ["Julian Ashwin <julianashwin@gmail.com>"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"

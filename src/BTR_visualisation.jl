@@ -95,10 +95,10 @@ function BTR_plot(β::Array{Float64,2}, ω_post::Array{Float64,2}, vocab::Array{
     # Extract key info
     ntopics = size(β,1)
 
-    top_words = DataFrame(string.(zeros(nwords, ntopics)))
+    top_words = DataFrame(string.(zeros(nwords, ntopics)),:auto)
     rename!(top_words, [Symbol("T$kk") for kk in 1:ntopics])
 
-    topic_df = DataFrame(transpose(β))
+    topic_df = DataFrame(Matrix(transpose(β)), :auto)
     rename!(topic_df, [Symbol("T$kk") for kk in 1:ntopics])
     topic_df.term = deepcopy(vocab)
     ytick_words = String[]
