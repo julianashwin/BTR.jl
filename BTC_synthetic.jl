@@ -12,7 +12,7 @@ pkg> dev https://github.com/julianashwin/BTR.jl
 
 """
 
-using Revise, BTR
+using BTR
 #include("src/BTR_dev.jl")
 using TextAnalysis, DataFrames, CSV, Plots, GLM, LinearAlgebra
 using StatsPlots, StatsBase, Plots.PlotMeasures, Distributions, Random
